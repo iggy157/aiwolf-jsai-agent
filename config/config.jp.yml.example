@@ -11,6 +11,16 @@ agent:
 llm:
   type: google
   sleep_time: 3
+  # trueにするとリクエスト種別ごとにLangChainとllm_message_historyを分離する.
+  # 共通系 (initialize, daily_initialize, daily_finish) は両方に送信する.
+  # 発話系 (talk, whisper) は llm.talk のモデルに送信する.
+  # アクション系 (vote, divine, guard, attack) は llm.action のモデルに送信する.
+  # falseにするとllm.typeの単一モデル/履歴で従来通り動作する.
+  separate_langchain: false
+  talk:
+    type: google
+  action:
+    type: claude
 
 openai:
   model: gpt-4o-mini

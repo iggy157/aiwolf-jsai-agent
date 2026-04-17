@@ -37,6 +37,10 @@ if TYPE_CHECKING:
 P = ParamSpec("P")
 T = TypeVar("T")
 
+_TALK_REQUESTS = {Request.TALK, Request.WHISPER}
+_ACTION_REQUESTS = {Request.VOTE, Request.DIVINE, Request.GUARD, Request.ATTACK}
+_SHARED_REQUESTS = {Request.INITIALIZE, Request.DAILY_INITIALIZE, Request.DAILY_FINISH}
+
 
 class Agent:
     """Base class for agents.
@@ -78,8 +82,23 @@ class Agent:
         self.sent_whisper_count: int = 0
         self.llm_model: BaseChatModel | None = None
         self.llm_message_history: list[BaseMessage] = []
+        self.llm_model_talk: BaseChatModel | None = None
+        self.llm_model_action: BaseChatModel | None = None
+        self.llm_message_history_talk: list[BaseMessage] = []
+        self.llm_message_history_action: list[BaseMessage] = []
 
         load_dotenv(Path(__file__).parent.joinpath("./../../config/.env"))
+
+    def _is_separate_langchain(self) -> bool:
+        """Return whether LangChain instances are separated by request type.
+
+        リクエスト種別ごとにLangChainを分離するかどうかを返す.
+
+        Returns:
+            bool: True if separated / 分離している場合はTrue
+        """
+        llm_config = self.config.get("llm", {})
+        return bool(llm_config.get("separate_langchain", False))
 
     @staticmethod
     def timeout(func: Callable[P, T]) -> Callable[P, T]:
@@ -161,6 +180,8 @@ class Agent:
             self.talk_history: list[Talk] = []
             self.whisper_history: list[Talk] = []
             self.llm_message_history: list[BaseMessage] = []
+            self.llm_message_history_talk: list[BaseMessage] = []
+            self.llm_message_history_action: list[BaseMessage] = []
         self.agent_logger.logger.debug(packet)
 
     def get_alive_agents(self) -> list[str]:
@@ -229,6 +250,39 @@ class Agent:
             send(text)
             await asyncio.sleep(5)
 
+    def _resolve_targets(
+        self,
+        request: Request,
+    ) -> list[tuple[BaseChatModel, list[BaseMessage], str]]:
+        """Return list of (model, history, label) pairs to send the prompt to.
+
+        プロンプトの送信先 (モデル, 履歴, ラベル) の組を返す.
+
+        Args:
+            request (Request): Request type / リクエストタイプ
+
+        Returns:
+            list[tuple[BaseChatModel, list[BaseMessage], str]]: Send targets / 送信先のリスト
+        """
+        if not self._is_separate_langchain():
+            if self.llm_model is None:
+                return []
+            return [(self.llm_model, self.llm_message_history, "default")]
+
+        targets: list[tuple[BaseChatModel, list[BaseMessage], str]] = []
+        if request in _SHARED_REQUESTS:
+            if self.llm_model_talk is not None:
+                targets.append((self.llm_model_talk, self.llm_message_history_talk, "talk"))
+            if self.llm_model_action is not None:
+                targets.append((self.llm_model_action, self.llm_message_history_action, "action"))
+        elif request in _TALK_REQUESTS:
+            if self.llm_model_talk is not None:
+                targets.append((self.llm_model_talk, self.llm_message_history_talk, "talk"))
+        elif request in _ACTION_REQUESTS:
+            if self.llm_model_action is not None:
+                targets.append((self.llm_model_action, self.llm_message_history_action, "action"))
+        return targets
+
     def _send_message_to_llm(self, request: Request | None) -> str | None:
         """Send message to LLM and get response.
 
@@ -258,19 +312,22 @@ class Agent:
         }
         template: Template = Template(prompt)
         prompt = template.render(**key).strip()
-        if self.llm_model is None:
+        targets = self._resolve_targets(request)
+        if not targets:
             self.agent_logger.logger.error("LLM is not initialized")
             return None
-        try:
-            self.llm_message_history.append(HumanMessage(content=prompt))
-            response = (self.llm_model | StrOutputParser()).invoke(self.llm_message_history)
-            self.llm_message_history.append(AIMessage(content=response))
-            self.agent_logger.logger.info(["LLM", prompt, response])
-        except Exception:
-            self.agent_logger.logger.exception("Failed to send message to LLM")
-            return None
-        else:
-            return response
+        last_response: str | None = None
+        for model, history, label in targets:
+            try:
+                history.append(HumanMessage(content=prompt))
+                response = (model | StrOutputParser()).invoke(history)
+                history.append(AIMessage(content=response))
+                self.agent_logger.logger.info(["LLM", label, prompt, response])
+                last_response = response
+            except Exception:
+                self.agent_logger.logger.exception("Failed to send message to LLM (%s)", label)
+                continue
+        return last_response
 
     @timeout
     def name(self) -> str:
@@ -283,44 +340,46 @@ class Agent:
         """
         return self.agent_name
 
-    def initialize(self) -> None:
-        """Perform initialization for game start request.
+    def _create_llm_model(self, model_type: str) -> BaseChatModel:
+        """Create an LLM model instance for the given provider type.
 
-        ゲーム開始リクエストに対する初期化処理を行う.
+        指定されたプロバイダタイプのLLMモデルインスタンスを生成する.
+
+        Args:
+            model_type (str): Provider type / プロバイダタイプ
+
+        Returns:
+            BaseChatModel: Created LLM model / 生成したLLMモデル
         """
-        if self.info is None:
-            return
-
-        model_type = str(self.config["llm"]["type"])
         match model_type:
             case "openai":
-                self.llm_model = ChatOpenAI(
+                return ChatOpenAI(
                     model=str(self.config["openai"]["model"]),
                     temperature=float(self.config["openai"]["temperature"]),
                     api_key=SecretStr(os.environ["OPENAI_API_KEY"]),
                 )
             case "google":
-                self.llm_model = ChatGoogleGenerativeAI(
+                return ChatGoogleGenerativeAI(
                     model=str(self.config["google"]["model"]),
                     temperature=float(self.config["google"]["temperature"]),
                     api_key=SecretStr(os.environ["GOOGLE_API_KEY"]),
                 )
             case "vertexai":
                 vertexai_config = self.config["vertexai"]
-                self.llm_model = ChatGoogleGenerativeAI(
+                return ChatGoogleGenerativeAI(
                     model=str(vertexai_config["model"]),
                     temperature=float(vertexai_config["temperature"]),
                     vertexai=True,
                 )
             case "ollama":
-                self.llm_model = ChatOllama(
+                return ChatOllama(
                     model=str(self.config["ollama"]["model"]),
                     temperature=float(self.config["ollama"]["temperature"]),
                     base_url=str(self.config["ollama"]["base_url"]),
                 )
             case "claude":
                 claude_config = self.config["claude"]
-                self.llm_model = ChatAnthropic(
+                return ChatAnthropic(
                     model_name=str(claude_config["model"]),
                     temperature=float(claude_config["temperature"]),
                     timeout=None,
@@ -329,7 +388,23 @@ class Agent:
                 )
             case _:
                 raise ValueError(model_type, "Unknown LLM type")
-        self.llm_model = self.llm_model
+
+    def initialize(self) -> None:
+        """Perform initialization for game start request.
+
+        ゲーム開始リクエストに対する初期化処理を行う.
+        """
+        if self.info is None:
+            return
+
+        if self._is_separate_langchain():
+            talk_type = str(self.config["llm"]["talk"]["type"])
+            action_type = str(self.config["llm"]["action"]["type"])
+            self.llm_model_talk = self._create_llm_model(talk_type)
+            self.llm_model_action = self._create_llm_model(action_type)
+        else:
+            model_type = str(self.config["llm"]["type"])
+            self.llm_model = self._create_llm_model(model_type)
         self._send_message_to_llm(self.request)
 
     def daily_initialize(self) -> None:

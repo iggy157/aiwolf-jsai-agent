@@ -11,6 +11,16 @@ agent:
 llm:
   type: google
   sleep_time: 3
+  # When true, use separate LangChain instances and llm_message_history per request group.
+  # Shared requests (initialize, daily_initialize, daily_finish) are sent to both.
+  # Talk requests (talk, whisper) use llm.talk.
+  # Action requests (vote, divine, guard, attack) use llm.action.
+  # When false, a single llm.type model/history is used (legacy behavior).
+  separate_langchain: false
+  talk:
+    type: google
+  action:
+    type: claude
 
 openai:
   model: gpt-4o-mini

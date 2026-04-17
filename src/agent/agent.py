@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar
 
 from dotenv import load_dotenv
 from jinja2 import Template
+from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -304,11 +305,27 @@ class Agent:
                     temperature=float(self.config["google"]["temperature"]),
                     api_key=SecretStr(os.environ["GOOGLE_API_KEY"]),
                 )
+            case "vertexai":
+                vertexai_config = self.config["vertexai"]
+                self.llm_model = ChatGoogleGenerativeAI(
+                    model=str(vertexai_config["model"]),
+                    temperature=float(vertexai_config["temperature"]),
+                    vertexai=True,
+                )
             case "ollama":
                 self.llm_model = ChatOllama(
                     model=str(self.config["ollama"]["model"]),
                     temperature=float(self.config["ollama"]["temperature"]),
                     base_url=str(self.config["ollama"]["base_url"]),
+                )
+            case "claude":
+                claude_config = self.config["claude"]
+                self.llm_model = ChatAnthropic(
+                    model_name=str(claude_config["model"]),
+                    temperature=float(claude_config["temperature"]),
+                    timeout=None,
+                    stop=None,
+                    api_key=SecretStr(os.environ["CLAUDE_API_KEY"]),
                 )
             case _:
                 raise ValueError(model_type, "Unknown LLM type")

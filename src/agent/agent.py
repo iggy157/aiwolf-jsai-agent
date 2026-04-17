@@ -16,7 +16,6 @@ from dotenv import load_dotenv
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import AIMessage, HumanMessage
-from langchain_core.output_parsers import StrOutputParser
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
@@ -29,6 +28,7 @@ if TYPE_CHECKING:
 from aiwolf_nlp_common.packet import Info, Packet, Request, Role, Setting, Status, Talk
 
 from utils.agent_logger import AgentLogger
+from utils.cost_utils import CostRecord, PricingRow, build_record, load_pricing_table
 from utils.stoppable_thread import StoppableThread
 
 if TYPE_CHECKING:
@@ -48,6 +48,12 @@ _JINJA_ENV = Environment(
     trim_blocks=False,
     lstrip_blocks=False,
     keep_trailing_newline=False,
+)
+
+_PRICING_ROOT = Path(__file__).parent.joinpath("./../../data/model_cost").resolve()
+# プロセス内で一度だけ料金テーブルをロードして共有する.
+_PRICING_TABLE: dict[tuple[str, str, str], PricingRow] = (
+    load_pricing_table(_PRICING_ROOT) if _PRICING_ROOT.exists() else {}
 )
 
 
@@ -97,6 +103,16 @@ class Agent:
         self.llm_message_history_action: list[BaseMessage] = []
         # single-turnモードで各日のdaily_initialize/daily_finishスナップショットを蓄積する.
         self.day_events: list[dict[str, Any]] = []
+
+        # Cost metadata captured when the model is created.
+        # Keys: provider_key (config llm.type), model_id (actual model name), pricing_mode.
+        self.llm_meta_default: dict[str, str] | None = None
+        self.llm_meta_talk: dict[str, str] | None = None
+        self.llm_meta_action: dict[str, str] | None = None
+        # LLM呼び出しごとに生成される CostRecord を時系列で蓄積する.
+        self.cost_records: list[CostRecord] = []
+        # Game IDはINITIALIZEパケット受信時にself.infoから取得できる.
+        self.game_id_cache: str = game_id
 
         load_dotenv(Path(__file__).parent.joinpath("./../../config/.env"))
 
@@ -288,35 +304,110 @@ class Agent:
     def _resolve_targets(
         self,
         request: Request,
-    ) -> list[tuple[BaseChatModel, list[BaseMessage], str]]:
-        """Return list of (model, history, label) pairs to send the prompt to.
+    ) -> list[tuple[BaseChatModel, list[BaseMessage], str, dict[str, str] | None]]:
+        """Return list of (model, history, label, meta) tuples to send the prompt to.
 
-        プロンプトの送信先 (モデル, 履歴, ラベル) の組を返す.
+        プロンプトの送信先 (モデル, 履歴, ラベル, 料金メタ情報) の組を返す.
 
         Args:
             request (Request): Request type / リクエストタイプ
 
         Returns:
-            list[tuple[BaseChatModel, list[BaseMessage], str]]: Send targets / 送信先のリスト
+            list[tuple[BaseChatModel, list[BaseMessage], str, dict[str, str] | None]]:
+                Send targets / 送信先のリスト
         """
         if not self._is_separate_langchain():
             if self.llm_model is None:
                 return []
-            return [(self.llm_model, self.llm_message_history, "default")]
+            return [(self.llm_model, self.llm_message_history, "default", self.llm_meta_default)]
 
-        targets: list[tuple[BaseChatModel, list[BaseMessage], str]] = []
+        targets: list[tuple[BaseChatModel, list[BaseMessage], str, dict[str, str] | None]] = []
         if request in _SHARED_REQUESTS:
             if self.llm_model_talk is not None:
-                targets.append((self.llm_model_talk, self.llm_message_history_talk, "talk"))
+                targets.append(
+                    (self.llm_model_talk, self.llm_message_history_talk, "talk", self.llm_meta_talk),
+                )
             if self.llm_model_action is not None:
-                targets.append((self.llm_model_action, self.llm_message_history_action, "action"))
+                targets.append(
+                    (self.llm_model_action, self.llm_message_history_action, "action", self.llm_meta_action),
+                )
         elif request in _TALK_REQUESTS:
             if self.llm_model_talk is not None:
-                targets.append((self.llm_model_talk, self.llm_message_history_talk, "talk"))
+                targets.append(
+                    (self.llm_model_talk, self.llm_message_history_talk, "talk", self.llm_meta_talk),
+                )
         elif request in _ACTION_REQUESTS:
             if self.llm_model_action is not None:
-                targets.append((self.llm_model_action, self.llm_message_history_action, "action"))
+                targets.append(
+                    (self.llm_model_action, self.llm_message_history_action, "action", self.llm_meta_action),
+                )
         return targets
+
+    def _record_cost(
+        self,
+        ai: AIMessage,
+        meta: dict[str, str] | None,
+        request_key: str,
+        label: str,
+    ) -> CostRecord | None:
+        """Extract token usage from an AIMessage and append a CostRecord.
+
+        AIMessage から token usage を抽出し CostRecord を蓄積する.
+
+        Args:
+            ai (AIMessage): LLM response / LLM応答
+            meta (dict | None): Model meta info / モデルメタ情報
+            request_key (str): Request key / リクエストキー
+            label (str): Target label (default/talk/action) / ターゲットラベル
+
+        Returns:
+            CostRecord | None: Created record / 生成した CostRecord
+        """
+        if meta is None:
+            return None
+        usage_md = getattr(ai, "usage_metadata", None)
+        resp_md = getattr(ai, "response_metadata", None)
+        record = build_record(
+            meta["provider_key"],
+            meta["model_id"],
+            meta["pricing_mode"],
+            usage_md,
+            resp_md,
+            _PRICING_TABLE,
+        )
+        record.details = {
+            "request_key": request_key,
+            "label": label,
+            "agent": self.agent_name,
+            "game_id": self._current_game_id(),
+        }
+        self.cost_records.append(record)
+        self.agent_logger.logger.info(
+            [
+                "COST",
+                label,
+                request_key,
+                record.provider,
+                record.model_id,
+                record.pricing_mode,
+                f"in={record.input_tokens}",
+                f"cached={record.cached_input_tokens}",
+                f"out={record.output_tokens}",
+                f"think={record.thinking_tokens}",
+                f"usd={record.cost_usd:.6f}",
+                f"unknown={record.unknown_pricing}",
+            ],
+        )
+        return record
+
+    def _current_game_id(self) -> str:
+        """Return the current game_id (prefer info.game_id, fallback to cache).
+
+        現在の game_id を返す (info.game_id を優先し, なければ初期キャッシュを使う).
+        """
+        if self.info is not None and getattr(self.info, "game_id", None):
+            return str(self.info.game_id)
+        return self.game_id_cache
 
     def _send_message_to_llm(self, request: Request | None) -> str | None:
         """Send message to LLM and get response.
@@ -360,14 +451,16 @@ class Agent:
             self.agent_logger.logger.error("LLM is not initialized")
             return None
         last_response: str | None = None
-        for model, history, label in targets:
+        for model, history, label, meta in targets:
             try:
                 if is_single_turn:
-                    response = (model | StrOutputParser()).invoke([HumanMessage(content=prompt)])
+                    ai = model.invoke([HumanMessage(content=prompt)])
                 else:
                     history.append(HumanMessage(content=prompt))
-                    response = (model | StrOutputParser()).invoke(history)
-                    history.append(AIMessage(content=response))
+                    ai = model.invoke(history)
+                    history.append(ai)
+                response = ai.content if isinstance(ai.content, str) else str(ai.content)
+                self._record_cost(ai, meta, request_key, label)
                 self.agent_logger.logger.info(["LLM", label, prompt, response])
                 last_response = response
             except Exception:
@@ -386,51 +479,70 @@ class Agent:
         """
         return self.agent_name
 
-    def _create_llm_model(self, model_type: str) -> BaseChatModel:
-        """Create an LLM model instance for the given provider type.
+    def _create_llm_model(self, model_type: str) -> tuple[BaseChatModel, dict[str, str]]:
+        """Create an LLM model instance and its cost metadata for the given provider type.
 
-        指定されたプロバイダタイプのLLMモデルインスタンスを生成する.
+        指定されたプロバイダタイプのLLMモデルインスタンスと, 料金計算用メタ情報を生成する.
 
         Args:
             model_type (str): Provider type / プロバイダタイプ
 
         Returns:
-            BaseChatModel: Created LLM model / 生成したLLMモデル
+            tuple[BaseChatModel, dict[str, str]]:
+                Created LLM model and its cost metadata (provider_key / model_id / pricing_mode).
+                生成したLLMモデルと料金計算用メタ情報.
         """
+        section = self.config.get(model_type, {}) or {}
+        pricing_mode = str(section.get("pricing_mode", "standard"))
+        model_id = str(section.get("model", ""))
+        meta = {"provider_key": model_type, "model_id": model_id, "pricing_mode": pricing_mode}
         match model_type:
             case "openai":
-                return ChatOpenAI(
-                    model=str(self.config["openai"]["model"]),
-                    temperature=float(self.config["openai"]["temperature"]),
-                    api_key=SecretStr(os.environ["OPENAI_API_KEY"]),
+                return (
+                    ChatOpenAI(
+                        model=model_id,
+                        temperature=float(section["temperature"]),
+                        api_key=SecretStr(os.environ["OPENAI_API_KEY"]),
+                    ),
+                    meta,
                 )
             case "google":
-                return ChatGoogleGenerativeAI(
-                    model=str(self.config["google"]["model"]),
-                    temperature=float(self.config["google"]["temperature"]),
-                    api_key=SecretStr(os.environ["GOOGLE_API_KEY"]),
+                return (
+                    ChatGoogleGenerativeAI(
+                        model=model_id,
+                        temperature=float(section["temperature"]),
+                        api_key=SecretStr(os.environ["GOOGLE_API_KEY"]),
+                    ),
+                    meta,
                 )
             case "vertexai":
-                vertexai_config = self.config["vertexai"]
-                return ChatGoogleGenerativeAI(
-                    model=str(vertexai_config["model"]),
-                    temperature=float(vertexai_config["temperature"]),
-                    vertexai=True,
+                return (
+                    ChatGoogleGenerativeAI(
+                        model=model_id,
+                        temperature=float(section["temperature"]),
+                        vertexai=True,
+                    ),
+                    meta,
                 )
             case "ollama":
-                return ChatOllama(
-                    model=str(self.config["ollama"]["model"]),
-                    temperature=float(self.config["ollama"]["temperature"]),
-                    base_url=str(self.config["ollama"]["base_url"]),
+                return (
+                    ChatOllama(
+                        model=model_id,
+                        temperature=float(section["temperature"]),
+                        base_url=str(section["base_url"]),
+                    ),
+                    meta,
                 )
             case "claude":
-                claude_config = self.config["claude"]
-                return ChatAnthropic(
-                    model_name=str(claude_config["model"]),
-                    temperature=float(claude_config["temperature"]),
-                    timeout=None,
-                    stop=None,
-                    api_key=SecretStr(os.environ["CLAUDE_API_KEY"]),
+                return (
+                    ChatAnthropic(
+                        model_name=model_id,
+                        temperature=float(section["temperature"]),
+                        timeout=None,
+                        stop=None,
+                        api_key=SecretStr(os.environ["CLAUDE_API_KEY"]),
+                    ),
+                    meta,
                 )
             case _:
                 raise ValueError(model_type, "Unknown LLM type")
@@ -446,11 +558,11 @@ class Agent:
         if self._is_separate_langchain():
             talk_type = str(self.config["llm"]["talk"]["type"])
             action_type = str(self.config["llm"]["action"]["type"])
-            self.llm_model_talk = self._create_llm_model(talk_type)
-            self.llm_model_action = self._create_llm_model(action_type)
+            self.llm_model_talk, self.llm_meta_talk = self._create_llm_model(talk_type)
+            self.llm_model_action, self.llm_meta_action = self._create_llm_model(action_type)
         else:
             model_type = str(self.config["llm"]["type"])
-            self.llm_model = self._create_llm_model(model_type)
+            self.llm_model, self.llm_meta_default = self._create_llm_model(model_type)
         self._send_message_to_llm(self.request)
 
     def daily_initialize(self) -> None:

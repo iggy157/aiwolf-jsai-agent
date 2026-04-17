@@ -1,0 +1,41 @@
+# Single-turn モード用の子設定ファイル.
+# LLMプロバイダ・モデル・プロンプト定義を含む.
+# メインconfigの mode が single_turn のときに読み込まれる.
+#
+# NOTE: Step 3 で single-turn ランタイム (llm_message_history を使わず,
+# initialize/daily_initialize/daily_finish の情報と talk_history 全件をプロンプトに
+# 埋め込む実装) を追加する. 現時点では骨格のみ.
+
+llm:
+  type: google
+  sleep_time: 3
+  separate_langchain: false
+  talk:
+    type: google
+  action:
+    type: claude
+
+openai:
+  model: gpt-4o-mini
+  temperature: 0.7
+
+google:
+  model: gemini-2.0-flash-lite
+  temperature: 0.7
+
+vertexai:
+  model: gemini-2.0-flash-lite
+  temperature: 0.7
+
+ollama:
+  model: llama3.1
+  temperature: 0.7
+  base_url: http://localhost:11434
+
+claude:
+  model: claude-opus-4-5-20251101
+  temperature: 1.0
+
+# Step 3 で single-turn 用プロンプトを記述する. 毎リクエストで
+# 役職・プロフィール・ゲーム状態・履歴を全てプロンプト本文に埋め込む.
+prompt: {}

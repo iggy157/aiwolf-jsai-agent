@@ -1,0 +1,41 @@
+# Child configuration file for single-turn mode.
+# Contains LLM provider / model / prompt definitions.
+# Loaded when the main config's `mode` is set to `single_turn`.
+#
+# NOTE: Step 3 will add the single-turn runtime (no llm_message_history; embed
+# initialize/daily_initialize/daily_finish context and the full talk_history into
+# every prompt body). For now this file is a skeleton.
+
+llm:
+  type: google
+  sleep_time: 3
+  separate_langchain: false
+  talk:
+    type: google
+  action:
+    type: claude
+
+openai:
+  model: gpt-4o-mini
+  temperature: 0.7
+
+google:
+  model: gemini-2.0-flash-lite
+  temperature: 0.7
+
+vertexai:
+  model: gemini-2.0-flash-lite
+  temperature: 0.7
+
+ollama:
+  model: llama3.1
+  temperature: 0.7
+  base_url: http://localhost:11434
+
+claude:
+  model: claude-opus-4-5-20251101
+  temperature: 1.0
+
+# Step 3 will populate this with single-turn prompts that embed role / profile /
+# game state / history into every request body.
+prompt: {}

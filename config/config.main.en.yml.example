@@ -1,0 +1,39 @@
+# Main configuration file.
+# Defines the mode (multi_turn / single_turn) and shared settings (web_socket / agent / log).
+# Mode-specific settings (llm / prompt) are loaded from the child config file
+# specified in `configs` and merged with this file. On key conflict, the child config wins.
+
+mode: multi_turn
+
+configs:
+  multi_turn: ./config.multi_turn.en.yml
+  single_turn: ./config.single_turn.en.yml
+
+web_socket:
+  url: ws://127.0.0.1:8080/ws
+  token:
+  auto_reconnect: false
+
+agent:
+  num: 5
+  team: kanolab
+  kill_on_timeout: true
+
+log:
+  console_output: true
+  file_output: true
+  output_dir: ./log
+  level: debug
+
+  request:
+    name: false
+    initialize: false
+    daily_initialize: false
+    whisper: true
+    talk: true
+    daily_finish: false
+    divine: true
+    guard: true
+    vote: true
+    attack: true
+    finish: false

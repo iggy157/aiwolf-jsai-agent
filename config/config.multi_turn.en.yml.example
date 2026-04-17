@@ -1,12 +1,6 @@
-web_socket:
-  url: ws://127.0.0.1:8080/ws
-  token:
-  auto_reconnect: false
-
-agent:
-  num: 5
-  team: kanolab
-  kill_on_timeout: true
+# Child configuration file for multi-turn mode.
+# Contains LLM provider / model / prompt definitions.
+# Loaded when the main config's `mode` is set to `multi_turn`.
 
 llm:
   type: google
@@ -153,22 +147,3 @@ prompt:
     {{ k }}
     {% endif -%}
     {%- endfor %}
-
-log:
-  console_output: true
-  file_output: true
-  output_dir: ./log
-  level: debug
-
-  request:
-    name: false
-    initialize: false
-    daily_initialize: false
-    whisper: true
-    talk: true
-    daily_finish: false
-    divine: true
-    guard: true
-    vote: true
-    attack: true
-    finish: false

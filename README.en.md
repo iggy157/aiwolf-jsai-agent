@@ -25,16 +25,29 @@ LLM agent for the AIWolf Competition (Natural Language Division) — JSAI 2026 e
 Python 3.11+ and [uv](https://docs.astral.sh/uv/) are recommended.
 
 ```bash
-git clone https://github.com/aiwolfdial/aiwolf-nlp-agent-llm.git aiwolf-jsai-agent && cd aiwolf-jsai-agent && cp config/.env.example config/.env && cp config/config.main.en.yml.example config/config.main.yml && cp config/config.multi_turn.en.yml.example config/config.multi_turn.yml && cp config/config.single_turn.en.yml.example config/config.single_turn.yml && uv sync
+# 1) Clone the repo
+git clone https://github.com/aiwolfdial/aiwolf-nlp-agent-llm.git aiwolf-jsai-agent
+cd aiwolf-jsai-agent
+
+# 2) Create .env from template (fill in API keys afterwards)
+cp config/.env.example config/.env
+
+# 3) Copy the 3-file config set (main + multi_turn child + single_turn child)
+#    Swap .en for .jp if you prefer Japanese prompts
+cp config/config.main.en.yml.example         config/config.main.yml
+cp config/config.multi_turn.en.yml.example   config/config.multi_turn.yml
+cp config/config.single_turn.en.yml.example  config/config.single_turn.yml
+
+# 4) Install dependencies
+uv sync
 ```
 
-After setting API keys (`OPENAI_API_KEY` / `GOOGLE_API_KEY` / `CLAUDE_API_KEY`) in `config/.env`, run:
+After setting API keys (`OPENAI_API_KEY` / `GOOGLE_API_KEY` / `CLAUDE_API_KEY`, whichever you use) in `config/.env`, run:
 
 ```bash
+# Launch agents with the main config
 uv run python src/main.py -c ./config/config.main.yml
 ```
-
-To use Japanese prompts, copy the `.jp.yml.example` files instead.
 
 > Without `uv`: `python -m venv .venv && source .venv/bin/activate && pip install -e .`, then `python src/main.py -c ./config/config.main.yml`.
 

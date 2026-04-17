@@ -25,16 +25,29 @@
 Python 3.11 以上 + [uv](https://docs.astral.sh/uv/) を推奨します。
 
 ```bash
-git clone https://github.com/aiwolfdial/aiwolf-nlp-agent-llm.git aiwolf-jsai-agent && cd aiwolf-jsai-agent && cp config/.env.example config/.env && cp config/config.main.jp.yml.example config/config.main.yml && cp config/config.multi_turn.jp.yml.example config/config.multi_turn.yml && cp config/config.single_turn.jp.yml.example config/config.single_turn.yml && uv sync
+# 1) リポジトリ取得
+git clone https://github.com/aiwolfdial/aiwolf-nlp-agent-llm.git aiwolf-jsai-agent
+cd aiwolf-jsai-agent
+
+# 2) API キー用の .env をテンプレから作成 (編集は後述)
+cp config/.env.example config/.env
+
+# 3) 3分割configを example からコピー (メイン + multi_turn子 + single_turn子)
+#    英語プロンプトを使うなら .jp を .en に置き換える
+cp config/config.main.jp.yml.example         config/config.main.yml
+cp config/config.multi_turn.jp.yml.example   config/config.multi_turn.yml
+cp config/config.single_turn.jp.yml.example  config/config.single_turn.yml
+
+# 4) 依存インストール
+uv sync
 ```
 
-`config/.env` に API キー（`OPENAI_API_KEY` / `GOOGLE_API_KEY` / `CLAUDE_API_KEY`）を設定後、実行:
+`config/.env` に API キー（`OPENAI_API_KEY` / `GOOGLE_API_KEY` / `CLAUDE_API_KEY` のうち使うもの）を設定後、実行:
 
 ```bash
+# メイン config を指定してエージェントを起動
 uv run python src/main.py -c ./config/config.main.yml
 ```
-
-英語プロンプトを使う場合は `cp` コマンドで `.en.yml.example` をコピーしてください。
 
 > `uv` を使わない場合: `python -m venv .venv && source .venv/bin/activate && pip install -e .` の後、`python src/main.py -c ./config/config.main.yml` で実行。
 

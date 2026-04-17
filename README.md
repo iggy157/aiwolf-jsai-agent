@@ -45,11 +45,15 @@ uv sync
 `config/.env` に API キー（`OPENAI_API_KEY` / `GOOGLE_API_KEY` / `CLAUDE_API_KEY` のうち使うもの）を設定後、実行:
 
 ```bash
-# メイン config を指定してエージェントを起動
-uv run python src/main.py -c ./config/config.main.yml
+# エージェントを起動 (既定で ./config/config.main.yml を読み, モードに応じて子configを自動マージ)
+uv run python src/main.py
+
+# 明示的に指定する場合 / 複数 config を並列実行する場合のみ -c を使う
+uv run python src/main.py -c ./config/my_config.main.yml
+uv run python src/main.py -c './config/*.main.yml'
 ```
 
-> `uv` を使わない場合: `python -m venv .venv && source .venv/bin/activate && pip install -e .` の後、`python src/main.py -c ./config/config.main.yml` で実行。
+> `uv` を使わない場合: `python -m venv .venv && source .venv/bin/activate && pip install -e .` の後、`python src/main.py` で実行。
 
 ## 設定ファイル構成
 

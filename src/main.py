@@ -96,8 +96,8 @@ if __name__ == "__main__":
         "--config",
         type=str,
         nargs="+",
-        default=["./config/config.yml"],
-        help="設定ファイルのパス (複数指定可)",
+        default=["./config/config.main.yml"],
+        help="メイン設定ファイルのパス (複数指定可). 既定: ./config/config.main.yml",
     )
     args = parser.parse_args()
 

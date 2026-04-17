@@ -45,11 +45,15 @@ uv sync
 After setting API keys (`OPENAI_API_KEY` / `GOOGLE_API_KEY` / `CLAUDE_API_KEY`, whichever you use) in `config/.env`, run:
 
 ```bash
-# Launch agents with the main config
-uv run python src/main.py -c ./config/config.main.yml
+# Launch agents (defaults to ./config/config.main.yml; the matching child config is auto-merged based on `mode`)
+uv run python src/main.py
+
+# Use -c only when you want a non-default path or multiple configs in parallel
+uv run python src/main.py -c ./config/my_config.main.yml
+uv run python src/main.py -c './config/*.main.yml'
 ```
 
-> Without `uv`: `python -m venv .venv && source .venv/bin/activate && pip install -e .`, then `python src/main.py -c ./config/config.main.yml`.
+> Without `uv`: `python -m venv .venv && source .venv/bin/activate && pip install -e .`, then `python src/main.py`.
 
 ## Config files
 

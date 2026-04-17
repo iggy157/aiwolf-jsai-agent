@@ -2,7 +2,7 @@
 # Contains LLM provider / model / prompt definitions.
 # Loaded when the main config's `mode` is set to `multi_turn`.
 #
-# NOTE: The block-based prompt templates under prompts/aiwolf/blocks/ are currently
+# NOTE: The block-based prompt templates under prompts/ are currently
 # written in Japanese. This English example keeps the prompts inline and does not
 # use `{% include %}` until English-language blocks are added. See the .jp.yml
 # counterpart for the block-reference format.

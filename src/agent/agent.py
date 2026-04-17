@@ -41,7 +41,7 @@ _TALK_REQUESTS = {Request.TALK, Request.WHISPER}
 _ACTION_REQUESTS = {Request.VOTE, Request.DIVINE, Request.GUARD, Request.ATTACK}
 _SHARED_REQUESTS = {Request.INITIALIZE, Request.DAILY_INITIALIZE, Request.DAILY_FINISH}
 
-_BLOCKS_DIR = Path(__file__).parent.joinpath("./../../prompts/aiwolf/blocks").resolve()
+_BLOCKS_DIR = Path(__file__).parent.joinpath("./../../prompts").resolve()
 _JINJA_ENV = Environment(
     loader=FileSystemLoader(str(_BLOCKS_DIR)),
     autoescape=select_autoescape(enabled_extensions=(), default=False),

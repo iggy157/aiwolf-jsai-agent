@@ -36,6 +36,136 @@ claude:
   model: claude-opus-4-5-20251101
   temperature: 1.0
 
-# Step 3 will populate this with single-turn prompts that embed role / profile /
-# game state / history into every request body.
-prompt: {}
+# NOTE: In single-turn mode, initialize / daily_initialize / daily_finish are NOT sent to the LLM.
+# Their information is retained inside the agent (as day_events) and injected into the prompts below.
+# Prompt definitions for the initialize-series are therefore unnecessary.
+# Step 5 will replace each prompt with block references (instruction / identity / event / history / constraints).
+prompt:
+  talk: |-
+    You are a werewolf game agent.
+    Your name: {{ info.agent }}
+    Your role: {{ role.value }}
+    {% if info.profile is not none -%}
+    Profile: {{ info.profile }}
+    {%- endif %}
+
+    Past daily events:
+    {% for e in day_events -%}
+    Day {{ e.day }} ({{ e.phase }})
+    {% if e.medium_result is not none %}  Medium result: {{ e.medium_result }}{% endif %}
+    {% if e.divine_result is not none %}  Divine result: {{ e.divine_result }}{% endif %}
+    {% if e.executed_agent is not none %}  Execution: {{ e.executed_agent }}{% endif %}
+    {% if e.attacked_agent is not none %}  Attack: {{ e.attacked_agent }}{% endif %}
+    {% if e.vote_list is not none %}  Votes: {{ e.vote_list }}{% endif %}
+    {% if e.attack_vote_list is not none %}  Attack votes: {{ e.attack_vote_list }}{% endif %}
+    {% endfor %}
+
+    Talk history:
+    {% for w in talk_history -%}
+    {{ w.agent }}: {{ w.text }}
+    {% endfor %}
+
+    This is a talk request on day {{ info.day }}. Speak now.
+    Output "Over" to end your turn. Your response is sent directly to the game.
+  whisper: |-
+    You are a werewolf game agent.
+    Your name: {{ info.agent }}
+    Your role: {{ role.value }}
+    {% if info.profile is not none -%}
+    Profile: {{ info.profile }}
+    {%- endif %}
+
+    Past daily events:
+    {% for e in day_events -%}
+    Day {{ e.day }} ({{ e.phase }})
+    {% if e.medium_result is not none %}  Medium result: {{ e.medium_result }}{% endif %}
+    {% if e.divine_result is not none %}  Divine result: {{ e.divine_result }}{% endif %}
+    {% if e.executed_agent is not none %}  Execution: {{ e.executed_agent }}{% endif %}
+    {% if e.attacked_agent is not none %}  Attack: {{ e.attacked_agent }}{% endif %}
+    {% endfor %}
+
+    Whisper history:
+    {% for w in whisper_history -%}
+    {{ w.agent }}: {{ w.text }}
+    {% endfor %}
+
+    This is a whisper request on day {{ info.day }}. Speak now.
+    Output "Over" to end your turn. Your response is sent directly to the game.
+  divine: |-
+    You are the seer ({{ info.agent }}) in a werewolf game.
+    Past daily events:
+    {% for e in day_events -%}
+    Day {{ e.day }} ({{ e.phase }})
+    {% if e.executed_agent is not none %}  Execution: {{ e.executed_agent }}{% endif %}
+    {% if e.attacked_agent is not none %}  Attack: {{ e.attacked_agent }}{% endif %}
+    {% if e.divine_result is not none %}  Divine result: {{ e.divine_result }}{% endif %}
+    {% endfor %}
+
+    Talk history:
+    {% for w in talk_history -%}
+    {{ w.agent }}: {{ w.text }}
+    {% endfor %}
+
+    Output only the name of one agent to divine, chosen from:
+    {% for k, v in info.status_map.items() -%}
+    {%- if v == 'ALIVE' %}{{ k }}
+    {% endif -%}
+    {%- endfor %}
+  guard: |-
+    You are the bodyguard ({{ info.agent }}) in a werewolf game.
+    Past daily events:
+    {% for e in day_events -%}
+    Day {{ e.day }} ({{ e.phase }})
+    {% if e.executed_agent is not none %}  Execution: {{ e.executed_agent }}{% endif %}
+    {% if e.attacked_agent is not none %}  Attack: {{ e.attacked_agent }}{% endif %}
+    {% endfor %}
+
+    Talk history:
+    {% for w in talk_history -%}
+    {{ w.agent }}: {{ w.text }}
+    {% endfor %}
+
+    Output only the name of one agent to guard, chosen from:
+    {% for k, v in info.status_map.items() -%}
+    {%- if v == 'ALIVE' %}{{ k }}
+    {% endif -%}
+    {%- endfor %}
+  vote: |-
+    You are an agent ({{ info.agent }}, role: {{ role.value }}) in a werewolf game.
+    Past daily events:
+    {% for e in day_events -%}
+    Day {{ e.day }} ({{ e.phase }})
+    {% if e.executed_agent is not none %}  Execution: {{ e.executed_agent }}{% endif %}
+    {% if e.attacked_agent is not none %}  Attack: {{ e.attacked_agent }}{% endif %}
+    {% if e.vote_list is not none %}  Votes: {{ e.vote_list }}{% endif %}
+    {% endfor %}
+
+    Talk history:
+    {% for w in talk_history -%}
+    {{ w.agent }}: {{ w.text }}
+    {% endfor %}
+
+    Output only the name of one agent to vote for, chosen from:
+    {% for k, v in info.status_map.items() -%}
+    {%- if v == 'ALIVE' %}{{ k }}
+    {% endif -%}
+    {%- endfor %}
+  attack: |-
+    You are a werewolf ({{ info.agent }}) in a werewolf game.
+    Past daily events:
+    {% for e in day_events -%}
+    Day {{ e.day }} ({{ e.phase }})
+    {% if e.executed_agent is not none %}  Execution: {{ e.executed_agent }}{% endif %}
+    {% if e.attacked_agent is not none %}  Attack: {{ e.attacked_agent }}{% endif %}
+    {% endfor %}
+
+    Whisper history:
+    {% for w in whisper_history -%}
+    {{ w.agent }}: {{ w.text }}
+    {% endfor %}
+
+    Output only the name of one agent to attack, chosen from:
+    {% for k, v in info.status_map.items() -%}
+    {%- if v == 'ALIVE' %}{{ k }}
+    {% endif -%}
+    {%- endfor %}

@@ -86,6 +86,8 @@ class Agent:
         self.llm_model_action: BaseChatModel | None = None
         self.llm_message_history_talk: list[BaseMessage] = []
         self.llm_message_history_action: list[BaseMessage] = []
+        # single-turnモードで各日のdaily_initialize/daily_finishスナップショットを蓄積する.
+        self.day_events: list[dict[str, Any]] = []
 
         load_dotenv(Path(__file__).parent.joinpath("./../../config/.env"))
 
@@ -99,6 +101,16 @@ class Agent:
         """
         llm_config = self.config.get("llm", {})
         return bool(llm_config.get("separate_langchain", False))
+
+    def _is_single_turn(self) -> bool:
+        """Return whether the agent is running in single-turn mode.
+
+        single-turnモードで動作しているかを返す.
+
+        Returns:
+            bool: True if single-turn / single-turnの場合はTrue
+        """
+        return str(self.config.get("mode", "multi_turn")) == "single_turn"
 
     @staticmethod
     def timeout(func: Callable[P, T]) -> Callable[P, T]:
@@ -182,6 +194,20 @@ class Agent:
             self.llm_message_history: list[BaseMessage] = []
             self.llm_message_history_talk: list[BaseMessage] = []
             self.llm_message_history_action: list[BaseMessage] = []
+            self.day_events = []
+        if self.request in (Request.DAILY_INITIALIZE, Request.DAILY_FINISH) and packet.info is not None:
+            self.day_events.append(
+                {
+                    "day": packet.info.day,
+                    "phase": self.request.name.lower(),
+                    "medium_result": packet.info.medium_result,
+                    "divine_result": packet.info.divine_result,
+                    "executed_agent": packet.info.executed_agent,
+                    "attacked_agent": packet.info.attacked_agent,
+                    "vote_list": packet.info.vote_list,
+                    "attack_vote_list": packet.info.attack_vote_list,
+                },
+            )
         self.agent_logger.logger.debug(packet)
 
     def get_alive_agents(self) -> list[str]:
@@ -296,6 +322,10 @@ class Agent:
         """
         if request is None:
             return None
+        is_single_turn = self._is_single_turn()
+        # single-turn では共通リクエストはLLMに送らず, day_events等としてコンテキスト保持のみ行う.
+        if is_single_turn and request in _SHARED_REQUESTS:
+            return None
         if request.lower() not in self.config["prompt"]:
             return None
         prompt = self.config["prompt"][request.lower()]
@@ -309,6 +339,8 @@ class Agent:
             "role": self.role,
             "sent_talk_count": self.sent_talk_count,
             "sent_whisper_count": self.sent_whisper_count,
+            "day_events": self.day_events,
+            "mode": self.config.get("mode", "multi_turn"),
         }
         template: Template = Template(prompt)
         prompt = template.render(**key).strip()
@@ -319,9 +351,12 @@ class Agent:
         last_response: str | None = None
         for model, history, label in targets:
             try:
-                history.append(HumanMessage(content=prompt))
-                response = (model | StrOutputParser()).invoke(history)
-                history.append(AIMessage(content=response))
+                if is_single_turn:
+                    response = (model | StrOutputParser()).invoke([HumanMessage(content=prompt)])
+                else:
+                    history.append(HumanMessage(content=prompt))
+                    response = (model | StrOutputParser()).invoke(history)
+                    history.append(AIMessage(content=response))
                 self.agent_logger.logger.info(["LLM", label, prompt, response])
                 last_response = response
             except Exception:

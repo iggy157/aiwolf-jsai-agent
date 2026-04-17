@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 from aiwolf_nlp_common.packet import Info, Packet, Request, Role, Setting, Status, Talk
 
 from utils.agent_logger import AgentLogger
+from utils.cost_logger import append_cost_record, render_markdown, resolve_game_log_dir
 from utils.cost_utils import CostRecord, PricingRow, build_record, load_pricing_table
 from utils.stoppable_thread import StoppableThread
 
@@ -398,7 +399,36 @@ class Agent:
                 f"unknown={record.unknown_pricing}",
             ],
         )
+        self._write_cost_json(record, request_key)
         return record
+
+    def _write_cost_json(self, record: CostRecord, request_key: str) -> None:
+        """Append a record to the shared cost_summary.json with file locking.
+
+        ロック付きで cost_summary.json に1件追記する. 例外は握りつぶす
+        (ログ書き込み失敗でゲーム処理を止めない).
+
+        Args:
+            record (CostRecord): Cost record / 料金レコード
+            request_key (str): Request key / リクエストキー
+        """
+        if not bool(self.config.get("log", {}).get("file_output", False)):
+            return
+        game_id = self._current_game_id()
+        if not game_id:
+            return
+        try:
+            cost_dir = resolve_game_log_dir(self.config, game_id)
+            append_cost_record(
+                cost_dir,
+                self.agent_name,
+                record,
+                request_key,
+                game_id,
+                str(self.config.get("mode", "multi_turn")),
+            )
+        except Exception:
+            self.agent_logger.logger.exception("Failed to update cost_summary.json")
 
     def _current_game_id(self) -> str:
         """Return the current game_id (prefer info.game_id, fallback to cache).
@@ -656,6 +686,16 @@ class Agent:
 
         ゲーム終了リクエストに対する処理を行う.
         """
+        if not bool(self.config.get("log", {}).get("file_output", False)):
+            return
+        game_id = self._current_game_id()
+        if not game_id:
+            return
+        try:
+            cost_dir = resolve_game_log_dir(self.config, game_id)
+            render_markdown(cost_dir)
+        except Exception:
+            self.agent_logger.logger.exception("Failed to render cost_summary.md")
 
     @timeout
     def action(self) -> str | None:  # noqa: C901, PLR0911

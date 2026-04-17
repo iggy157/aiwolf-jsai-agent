@@ -36,136 +36,107 @@ claude:
   model: claude-opus-4-5-20251101
   temperature: 1.0
 
-# NOTE: single-turn では initialize / daily_initialize / daily_finish はLLMに送信されず,
-# それらで受け取った情報は agent 内部に保持 (day_events) され, 下記プロンプトに埋め込まれる.
-# このため initialize 系のプロンプト定義は不要.
-# Step 5 で各プロンプトをブロック参照 (instruction / identity / event / history / constraints) に置き換える.
+# single-turn モードでは llm_message_history を使わず, 毎リクエストでフルコンテキストを
+# プロンプト本文に埋め込む. 各プロンプトで 5ブロック (identity / event / history / instruction / constraints)
+# をすべて include する.
+# initialize / daily_initialize / daily_finish は LLM に送信されず, それらで受け取った情報は
+# agent 内部の day_events に蓄積され event.jinja 経由で各プロンプトに埋め込まれる.
 prompt:
   talk: |-
-    あなたは人狼ゲームのエージェントです。
-    あなたの名前: {{ info.agent }}
-    あなたの役職: {{ role.value }}
-    {% if info.profile is not none -%}
-    プロフィール: {{ info.profile }}
-    {%- endif %}
+    {% include 'identity.jinja' %}
 
-    これまでの日次イベント:
-    {% for e in day_events -%}
-    Day {{ e.day }} ({{ e.phase }})
-    {% if e.medium_result is not none %}  霊能結果: {{ e.medium_result }}{% endif %}
-    {% if e.divine_result is not none %}  占い結果: {{ e.divine_result }}{% endif %}
-    {% if e.executed_agent is not none %}  追放結果: {{ e.executed_agent }}{% endif %}
-    {% if e.attacked_agent is not none %}  襲撃結果: {{ e.attacked_agent }}{% endif %}
-    {% if e.vote_list is not none %}  投票結果: {{ e.vote_list }}{% endif %}
-    {% if e.attack_vote_list is not none %}  襲撃投票結果: {{ e.attack_vote_list }}{% endif %}
-    {% endfor %}
+    # 日次イベント
+    {% include 'event.jinja' %}
 
-    トーク履歴:
-    {% for w in talk_history -%}
-    {{ w.agent }}: {{ w.text }}
-    {% endfor %}
+    # トーク履歴
+    {% set history_source = talk_history -%}
+    {% set history_start = 0 -%}
+    {% include 'history.jinja' %}
 
-    現在 {{ info.day }}日目のトークリクエストです。発言してください。
-    発言を終了したい場合は「Over」と出力してください。レスポンスはそのままゲームに送信されます。
+    {% include 'instruction.jinja' %}
+    {% include 'constraints.jinja' %}
   whisper: |-
-    あなたは人狼ゲームのエージェントです。
-    あなたの名前: {{ info.agent }}
-    あなたの役職: {{ role.value }}
-    {% if info.profile is not none -%}
-    プロフィール: {{ info.profile }}
-    {%- endif %}
+    {% include 'identity.jinja' %}
 
-    これまでの日次イベント:
-    {% for e in day_events -%}
-    Day {{ e.day }} ({{ e.phase }})
-    {% if e.medium_result is not none %}  霊能結果: {{ e.medium_result }}{% endif %}
-    {% if e.divine_result is not none %}  占い結果: {{ e.divine_result }}{% endif %}
-    {% if e.executed_agent is not none %}  追放結果: {{ e.executed_agent }}{% endif %}
-    {% if e.attacked_agent is not none %}  襲撃結果: {{ e.attacked_agent }}{% endif %}
-    {% endfor %}
+    # 日次イベント
+    {% include 'event.jinja' %}
 
-    囁き履歴:
-    {% for w in whisper_history -%}
-    {{ w.agent }}: {{ w.text }}
-    {% endfor %}
+    # 囁き履歴
+    {% set history_source = whisper_history -%}
+    {% set history_start = 0 -%}
+    {% include 'history.jinja' %}
 
-    現在 {{ info.day }}日目の囁きリクエストです。発言してください。
-    発言を終了したい場合は「Over」と出力してください。レスポンスはそのままゲームに送信されます。
+    {% include 'instruction.jinja' %}
+    {% include 'constraints.jinja' %}
   divine: |-
-    あなたは人狼ゲームの占い師 ({{ info.agent }}) です。
-    これまでの日次イベント:
-    {% for e in day_events -%}
-    Day {{ e.day }} ({{ e.phase }})
-    {% if e.executed_agent is not none %}  追放結果: {{ e.executed_agent }}{% endif %}
-    {% if e.attacked_agent is not none %}  襲撃結果: {{ e.attacked_agent }}{% endif %}
-    {% if e.divine_result is not none %}  占い結果: {{ e.divine_result }}{% endif %}
-    {% endfor %}
+    {% include 'identity.jinja' %}
 
-    トーク履歴:
-    {% for w in talk_history -%}
-    {{ w.agent }}: {{ w.text }}
-    {% endfor %}
+    # 日次イベント
+    {% include 'event.jinja' %}
 
-    占い対象を1名, 以下から選んでエージェント名のみを出力してください:
+    # トーク履歴
+    {% set history_source = talk_history -%}
+    {% set history_start = 0 -%}
+    {% include 'history.jinja' %}
+
+    {% include 'instruction.jinja' %}
+    対象:
     {% for k, v in info.status_map.items() -%}
     {%- if v == 'ALIVE' %}{{ k }}
     {% endif -%}
     {%- endfor %}
+    {% include 'constraints.jinja' %}
   guard: |-
-    あなたは人狼ゲームの騎士 ({{ info.agent }}) です。
-    これまでの日次イベント:
-    {% for e in day_events -%}
-    Day {{ e.day }} ({{ e.phase }})
-    {% if e.executed_agent is not none %}  追放結果: {{ e.executed_agent }}{% endif %}
-    {% if e.attacked_agent is not none %}  襲撃結果: {{ e.attacked_agent }}{% endif %}
-    {% endfor %}
+    {% include 'identity.jinja' %}
 
-    トーク履歴:
-    {% for w in talk_history -%}
-    {{ w.agent }}: {{ w.text }}
-    {% endfor %}
+    # 日次イベント
+    {% include 'event.jinja' %}
 
-    護衛対象を1名, 以下から選んでエージェント名のみを出力してください:
+    # トーク履歴
+    {% set history_source = talk_history -%}
+    {% set history_start = 0 -%}
+    {% include 'history.jinja' %}
+
+    {% include 'instruction.jinja' %}
+    対象:
     {% for k, v in info.status_map.items() -%}
     {%- if v == 'ALIVE' %}{{ k }}
     {% endif -%}
     {%- endfor %}
+    {% include 'constraints.jinja' %}
   vote: |-
-    あなたは人狼ゲームのエージェント ({{ info.agent }}, 役職: {{ role.value }}) です。
-    これまでの日次イベント:
-    {% for e in day_events -%}
-    Day {{ e.day }} ({{ e.phase }})
-    {% if e.executed_agent is not none %}  追放結果: {{ e.executed_agent }}{% endif %}
-    {% if e.attacked_agent is not none %}  襲撃結果: {{ e.attacked_agent }}{% endif %}
-    {% if e.vote_list is not none %}  投票結果: {{ e.vote_list }}{% endif %}
-    {% endfor %}
+    {% include 'identity.jinja' %}
 
-    トーク履歴:
-    {% for w in talk_history -%}
-    {{ w.agent }}: {{ w.text }}
-    {% endfor %}
+    # 日次イベント
+    {% include 'event.jinja' %}
 
-    投票対象を1名, 以下から選んでエージェント名のみを出力してください:
+    # トーク履歴
+    {% set history_source = talk_history -%}
+    {% set history_start = 0 -%}
+    {% include 'history.jinja' %}
+
+    {% include 'instruction.jinja' %}
+    対象:
     {% for k, v in info.status_map.items() -%}
     {%- if v == 'ALIVE' %}{{ k }}
     {% endif -%}
     {%- endfor %}
+    {% include 'constraints.jinja' %}
   attack: |-
-    あなたは人狼ゲームの人狼 ({{ info.agent }}) です。
-    これまでの日次イベント:
-    {% for e in day_events -%}
-    Day {{ e.day }} ({{ e.phase }})
-    {% if e.executed_agent is not none %}  追放結果: {{ e.executed_agent }}{% endif %}
-    {% if e.attacked_agent is not none %}  襲撃結果: {{ e.attacked_agent }}{% endif %}
-    {% endfor %}
+    {% include 'identity.jinja' %}
 
-    囁き履歴:
-    {% for w in whisper_history -%}
-    {{ w.agent }}: {{ w.text }}
-    {% endfor %}
+    # 日次イベント
+    {% include 'event.jinja' %}
 
-    襲撃対象を1名, 以下から選んでエージェント名のみを出力してください:
+    # 囁き履歴
+    {% set history_source = whisper_history -%}
+    {% set history_start = 0 -%}
+    {% include 'history.jinja' %}
+
+    {% include 'instruction.jinja' %}
+    対象:
     {% for k, v in info.status_map.items() -%}
     {%- if v == 'ALIVE' %}{{ k }}
     {% endif -%}
     {%- endfor %}
+    {% include 'constraints.jinja' %}

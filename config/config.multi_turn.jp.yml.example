@@ -37,113 +37,66 @@ claude:
   model: claude-opus-4-5-20251101
   temperature: 1.0
 
+# multi-turn モードでは LLM の会話履歴 (llm_message_history) が LangChain 側で保持されるため,
+# 各リクエストのプロンプトは最低限のワンラインで足りる.
+# ただし llm.separate_langchain=true の場合は talk系 / action系 LangChain が分離され履歴が共有されないため,
+# 共通リクエスト (initialize / daily_initialize / daily_finish) のプロンプトで identity / event ブロックを
+# include し, 両系統に最低限の情報共有を行う.
 prompt:
   initialize: |-
-    あなたは人狼ゲームのエージェントです。
-    あなたの名前は{{ info.agent }}です。
-    あなたの役職は{{ role.value }}です。
-
-    これからゲームを進行していきます。リクエストが来た際には、日本語で適切な応答を返してください。
-
-    トークリクエストと囁きリクエストに対しては、ゲーム内で発言するべき内容のみを出力してください。
-    履歴がある場合は、それを参考にしてください。ない場合は、適切な内容を出力してください。
-    これ以上の情報を得られないと考えたときなどトークを終了したい場合については「Over」と出力してください。
-
-    他のリクエストに対しては、行動の対象となるエージェントの名前のみを出力してください。
-    対象となる生存しているエージェントの一覧が付与されています。
-
-    {% if info.profile is not none -%}
-    あなたのプロフィール: {{ info.profile }}
-    {%- endif %}
-
-    あなたのレスポンスはそのままゲーム内に送信されるため、不要な情報を含めないでください。
+    {% include 'identity.jinja' %}
+    {% include 'instruction.jinja' %}
+    以降のリクエストには日本語で応答してください。レスポンスはそのままゲームに送信されるため, 不要な情報を含めないでください。
   daily_initialize: |-
-    昼開始リクエスト
-    {{ info.day }}日目
-    {% if info.medium_result is not none -%}
-    霊能結果: {{ info.medium_result }}
-    {%- endif %}
-    {% if info.divine_result is not none -%}
-    占い結果: {{ info.divine_result }}
-    {%- endif %}
-    {% if info.executed_agent is not none -%}
-    追放結果: {{ info.executed_agent }}
-    {%- endif %}
-    {% if info.attacked_agent is not none -%}
-    襲撃結果: {{ info.attacked_agent }}
-    {%- endif %}
-    {% if info.vote_list is not none -%}
-    投票結果: {{ info.vote_list }}
-    {%- endif %}
-    {% if info.attack_vote_list is not none -%}
-    襲撃投票結果: {{ info.attack_vote_list }}
-    {%- endif %}
-  whisper: |-
-    囁きリクエスト
-    履歴:
-    {% for w in whisper_history[sent_whisper_count:] -%}
-    {{ w.agent }}: {{ w.text }}
-    {% endfor %}
-  talk: |-
-    トークリクエスト
-    履歴:
-    {% for w in talk_history[sent_talk_count:] -%}
-    {{ w.agent }}: {{ w.text }}
-    {% endfor %}
+    {% include 'instruction.jinja' %}
+    {% include 'event.jinja' %}
   daily_finish: |-
-    昼終了リクエスト
-    履歴:
-    {% for w in talk_history[sent_talk_count:] -%}
-    {{ w.agent }}: {{ w.text }}
-    {% endfor %}
-    {{ info.day }}日目
-    {% if info.medium_result is not none -%}
-    霊能結果: {{ info.medium_result }}
-    {%- endif %}
-    {% if info.divine_result is not none -%}
-    占い結果: {{ info.divine_result }}
-    {%- endif %}
-    {% if info.executed_agent is not none -%}
-    追放結果: {{ info.executed_agent }}
-    {%- endif %}
-    {% if info.attacked_agent is not none -%}
-    襲撃結果: {{ info.attacked_agent }}
-    {%- endif %}
-    {% if info.vote_list is not none -%}
-    投票結果: {{ info.vote_list }}
-    {%- endif %}
-    {% if info.attack_vote_list is not none -%}
-    襲撃投票結果: {{ info.attack_vote_list }}
-    {%- endif %}
+    {% include 'instruction.jinja' %}
+    {% include 'event.jinja' %}
+    {% set history_source = talk_history -%}
+    {% set history_start = sent_talk_count -%}
+    {% include 'history.jinja' %}
+  talk: |-
+    {% set history_source = talk_history -%}
+    {% set history_start = sent_talk_count -%}
+    {% include 'history.jinja' %}
+    {% include 'instruction.jinja' %}
+    {% include 'constraints.jinja' %}
+  whisper: |-
+    {% set history_source = whisper_history -%}
+    {% set history_start = sent_whisper_count -%}
+    {% include 'history.jinja' %}
+    {% include 'instruction.jinja' %}
+    {% include 'constraints.jinja' %}
   divine: |-
-    占いリクエスト
+    {% include 'instruction.jinja' %}
     対象:
     {% for k, v in info.status_map.items() -%}
-    {%- if v == 'ALIVE' -%}
-    {{ k }}
+    {%- if v == 'ALIVE' %}{{ k }}
     {% endif -%}
     {%- endfor %}
+    {% include 'constraints.jinja' %}
   guard: |-
-    護衛リクエスト
+    {% include 'instruction.jinja' %}
     対象:
     {% for k, v in info.status_map.items() -%}
-    {%- if v == 'ALIVE' -%}
-    {{ k }}
+    {%- if v == 'ALIVE' %}{{ k }}
     {% endif -%}
     {%- endfor %}
+    {% include 'constraints.jinja' %}
   vote: |-
-    投票リクエスト
+    {% include 'instruction.jinja' %}
     対象:
     {% for k, v in info.status_map.items() -%}
-    {%- if v == 'ALIVE' -%}
-    {{ k }}
+    {%- if v == 'ALIVE' %}{{ k }}
     {% endif -%}
     {%- endfor %}
+    {% include 'constraints.jinja' %}
   attack: |-
-    襲撃リクエスト
+    {% include 'instruction.jinja' %}
     対象:
     {% for k, v in info.status_map.items() -%}
-    {%- if v == 'ALIVE' -%}
-    {{ k }}
+    {%- if v == 'ALIVE' %}{{ k }}
     {% endif -%}
     {%- endfor %}
+    {% include 'constraints.jinja' %}

@@ -21,7 +21,7 @@ llm:
   # talk と action に別々に当てられる. type を省略すると llm.type をデフォルトとして使う.
   talk:
     type: openai
-    model: gpt-4o
+    model: gpt-5.2
   action:
     type: openai
     model: gpt-4o-mini

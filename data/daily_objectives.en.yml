@@ -1,0 +1,63 @@
+# =====================================================================
+# Per-day primary objectives for each role (one item each)
+# ---------------------------------------------------------------------
+# Defines the central objective each role should aim for on a given day,
+# written as a single sentence that is short enough to feed directly to
+# an LLM as a prompt fragment.
+#
+# Keys:
+#   Role names matching the English enum values in
+#   aiwolf_nlp_common.packet.Role.
+#
+# Day buckets:
+#   day_0   - Observation-focused day: no execution, no attack; only the
+#             divine phase runs.
+#   day_1   - The first execution and first attack occur today. It is
+#             also the first day seer results can be shared.
+#   day_2   - Start of the mid-game. Core issues are fake-seer handling,
+#             using accumulated medium results, and picking attack
+#             targets wisely.
+#   default - Generic guidance for Day 3 onward (late-game-oriented).
+#             Few players remain and one execution or attack can decide
+#             the game.
+#
+# The wording is intentionally setup-agnostic (5 / 9 / 13-player games).
+# BODYGUARD and MEDIUM do not appear in 5-player games per the server
+# spec, but guidance is kept for 9 / 13-player games.
+# =====================================================================
+
+VILLAGER:
+  day_0: "Introduce yourself while observing each other agent's behavior and speech patterns; note anything suspicious or unusual. No execution or attack happens today, so focus on information gathering."
+  day_1: "Cross-check any seer's CO against each agent's Day-0 statements for consistency, then vote for the agent who looks most like a werewolf."
+  day_2: "Examine contradictions between competing seer COs (the presence of a fake seer) and any information derived from last night's attack target to narrow down the werewolf lineup."
+  default: "Protect confirmed village roles (seer, medium) while steadily eliminating remaining werewolf candidates one at a time. Stay aware that a single wrong execution can lose the game."
+
+SEER:
+  day_0: "Pick your Day-0 divine target and memorize the result. Decide your CO timing based on how the game unfolds (early CO is advantageous in some situations; staying hidden is better in others)."
+  day_1: "Decide whether to CO and use your divine result(s) to steer the village toward executing the werewolf. Prepare rebuttals in case a fake-seer counter-CO appears."
+  day_2: "Share your new divine result, establish a clear conflict structure against any fake seer, and get the village to execute someone consistent with your own results."
+  default: "Keep producing a divine result every day while you survive. To reduce attack risk, avoid standing out too much in discussion — sometimes delegate analysis to other villagers."
+
+BODYGUARD:
+  day_0: "There is no guard on Day 0, so focus on information gathering: who looks like the genuine seer, and who is likely to be attacked. Avoid CO on Day 0 (from Day 1 onward, a tactical CO to mislead guard-reading is still an option)."
+  day_1: "Pick whoever seems to be the genuine seer (or the most likely attack target among key village-team agents) as your guard target. Keep your own role hidden."
+  day_2: "Continue guarding the key role-holders. Be mindful not to let werewolves predict your guard target (e.g. avoid naive consecutive guards on the same player)."
+  default: "While you survive, keep guarding the most important village agent. Avoid a careless CO until late game so werewolves do not pierce your cover."
+
+MEDIUM:
+  day_0: "No medium result is available on Day 0 since there is no execution. Just observe the flow of discussion and refrain from CO."
+  day_1: "You receive the first medium result (on Day 1's executed player). Do not CO yet — save the result as evidence for judging the genuineness of seer COs later."
+  day_2: "Once you have accumulated multiple medium results, judge the right moment to CO — to counter a fake seer or break a discussion deadlock. A werewolf-species result becomes a strong card to rally the village."
+  default: "After CO, drive the discussion using all your accumulated medium results to help narrow down the remaining werewolves. If still hidden, reveal at a decisive moment as a trump card."
+
+WEREWOLF:
+  day_0: "Act naturally as a villager while estimating from speech and behavior who might be a threat (seer, bodyguard, medium). When the setup has multiple werewolves, use the whisper phase to build the foundation of coordination with your teammate (this does not occur in single-werewolf setups)."
+  day_1: "Play a harmless villager during daytime discussion, and decide with your teammate(s) the most threatening agent (e.g. an already-CO'd seer) as tonight's attack target."
+  day_2: "Choose between sowing confusion with a fake seer claim or attacking a not-yet-confirmed role-holder, all while positioning yourself so you are not the one executed."
+  default: "Aim for the moment when living werewolves ≥ living humans. Shape the game so that one attack and one execution can close it out, and keep deflecting suspicion onto others."
+
+POSSESSED:
+  day_0: "Act as a villager while inferring from speech and behavior who the genuine seer is and which agents might be moving as werewolves. A Day-0 fake-seer CO is one viable option — decide based on the situation."
+  day_1: "If you have not already CO'd on Day 0, decide today whether to CO as a fake seer. A CO creates a conflict structure against the real seer and strongly protects the werewolf side."
+  day_2: "If you CO'd as a fake seer, keep issuing consistent fake divine results to steer the village toward a wrong execution. Even without a CO, make remarks in discussion that protect the werewolves."
+  default: "For the werewolf team's victory, prioritize the werewolves' survival — accept your own execution if it helps. Never reveal your true role until the very end."

@@ -1,0 +1,25 @@
+{#-
+  rules.jinja
+  ゲームの基本ルール (本日のフェーズ進行) と人数別役職編成を描画する.
+  src/utils/rules.resolve_rules が agent.py で以下の構造を解決して
+  render context に注入する:
+    rules = {
+      "day": int, "morning": str, "night": str,
+      "agent_count": int, "composition": [{"role","label","count"}, ...]
+    }
+  rules が None または必要キーを欠く場合は対応セクションをスキップする.
+  Expects: rules (dict | None)
+-#}
+{% if rules -%}
+{% if rules.agent_count is defined and rules.composition -%}
+# 役職編成 ({{ rules.agent_count }}人ゲーム)
+{% for entry in rules.composition -%}
+- {{ entry.label }}: {{ entry.count }}
+{% endfor %}
+{% endif -%}
+{%- if rules.day is defined -%}
+# 本日 (Day {{ rules.day }}) のフェーズ
+朝: {{ rules.morning }}
+夜: {{ rules.night }}
+{% endif -%}
+{%- endif -%}

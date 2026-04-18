@@ -1,0 +1,25 @@
+{#-
+  rules.jinja (English)
+  Renders basic game rules (today's phase progression) and the role
+  composition for the current player count.
+  src/utils/rules.resolve_rules populates the render context in agent.py:
+    rules = {
+      "day": int, "morning": str, "night": str,
+      "agent_count": int, "composition": [{"role","label","count"}, ...]
+    }
+  When rules is None or a section is missing, that section is skipped.
+  Expects: rules (dict | None)
+-#}
+{% if rules -%}
+{% if rules.agent_count is defined and rules.composition -%}
+# Role composition ({{ rules.agent_count }}-player game)
+{% for entry in rules.composition -%}
+- {{ entry.label }}: {{ entry.count }}
+{% endfor %}
+{% endif -%}
+{%- if rules.day is defined -%}
+# Today (Day {{ rules.day }})
+Morning: {{ rules.morning }}
+Night: {{ rules.night }}
+{% endif -%}
+{%- endif -%}

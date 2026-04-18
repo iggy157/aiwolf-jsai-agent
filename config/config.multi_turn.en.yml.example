@@ -58,6 +58,7 @@ prompt:
     {{ block('instruction') }}
   daily_initialize: |-
     {{ block('instruction') }}
+    {{ block('rules') }}
     {{ block('event') }}
     {{ block('daily_objective') }}
   daily_finish: |-

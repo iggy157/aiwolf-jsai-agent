@@ -1,0 +1,69 @@
+# =====================================================================
+# Game rules: per-day phase progression + per-player-count role composition
+# ---------------------------------------------------------------------
+# This file tells the LLM explicitly what happens each morning / night so
+# that it does not ask for or fabricate results (divine / medium / etc.)
+# that have not yet occurred on the given day.
+#
+# Day-bucket rationale (aiwolf-nlp-server/doc/ja/logic.md):
+#   Day 0 night: divine phase only (no execution, no guard, no attack)
+#   Day 1 night: execution -> divine -> whisper -> guard -> attack
+#   Day 2+ night: same ordering as Day 1
+#
+# When each result type first becomes available:
+#   Divine result:    Day 0 night -> usable on Day 1 morning
+#   Execution result: Day 1 night -> usable on Day 2 morning
+#   Medium result:    Day 1 night's executed player -> usable on Day 2 morning
+#   Attack result:    Day 1 night -> usable on Day 2 morning
+# So Day 2 morning is when the full set of results first shows up.
+# =====================================================================
+
+# Per-day phase-progression rules. `morning` describes the situation at the
+# start of daytime discussion. `night` lists the phases that run that night.
+daily:
+  day_0:
+    morning: "First morning of the game. No divine / medium / execution / attack results exist yet."
+    night: "Only the divine phase runs on Day 0 night. No execution, guard, or attack occurs."
+  day_1:
+    morning: "Only the seer has one divine result (from Day 0 night). No medium / execution / attack results yet (Day 0 had no execution or attack)."
+    night: "From Day 1 onward the full sequence runs each night: execution -> divine -> whisper -> guard -> attack. The first execution and first attack happen tonight."
+  day_2:
+    morning: "The seer holds multiple divine results. The medium receives the very first medium result (the species of the player executed on Day 1 night). The first attack result (who was killed last night) is also shared today."
+    night: "execution -> divine -> whisper -> guard -> attack runs in order. The same ordering continues on later nights."
+  default:
+    morning: "Divine and medium results have accumulated over multiple days. Last night's execution and attack results are newly shared today."
+    night: "execution -> divine -> whisper -> guard -> attack runs in order."
+
+# Role composition per player count (matches aiwolf-nlp-server/doc/ja/logic.md).
+# Village team: VILLAGER / SEER / BODYGUARD / MEDIUM
+# Werewolf team: WEREWOLF / POSSESSED (POSSESSED has species HUMAN but is counted on the werewolf team)
+compositions:
+  5:
+    WEREWOLF: 1
+    POSSESSED: 1
+    SEER: 1
+    VILLAGER: 2
+  9:
+    WEREWOLF: 2
+    POSSESSED: 1
+    SEER: 1
+    BODYGUARD: 1
+    MEDIUM: 1
+    VILLAGER: 3
+  13:
+    WEREWOLF: 3
+    POSSESSED: 1
+    SEER: 1
+    BODYGUARD: 1
+    MEDIUM: 1
+    VILLAGER: 6
+
+# Labels used when rendering the composition. The English file uses the
+# server's enum names verbatim.
+role_labels:
+  WEREWOLF: Werewolf
+  POSSESSED: Possessed
+  SEER: Seer
+  BODYGUARD: Bodyguard
+  MEDIUM: Medium
+  VILLAGER: Villager

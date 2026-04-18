@@ -33,6 +33,7 @@ from utils.cost_logger import append_cost_record, render_markdown, resolve_game_
 from utils.cost_utils import CostRecord, PricingRow, build_record, load_pricing_table
 from utils.daily_objective import resolve_objective
 from utils.profile import load_profile_data, resolve_profile
+from utils.rules import resolve_rules
 from utils.stoppable_thread import StoppableThread
 
 if TYPE_CHECKING:
@@ -562,6 +563,10 @@ class Agent:
         day = self.info.day if self.info is not None else None
         role_name = self.role.value if self.role is not None else None
         daily_objective_text = resolve_objective(lang, role_name, day)
+        # 本日のフェーズ進行ルールと人数別役職編成を data/rules.<lang>.yml から解決.
+        # rules.jinja がこの dict を参照して描画する. 未解決時は None で空出力.
+        agent_count = self.setting.agent_count if self.setting is not None else None
+        rules_data = resolve_rules(lang, day, agent_count)
         key = {
             "info": self.info,
             "setting": self.setting,
@@ -577,6 +582,7 @@ class Agent:
             "local_profile": local_profile,
             "profile_encoding": profile_encoding,
             "daily_objective": daily_objective_text,
+            "rules": rules_data,
         }
         env = _get_jinja_env(lang)
         template = env.from_string(prompt)

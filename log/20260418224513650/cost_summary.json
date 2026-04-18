@@ -1,0 +1,281 @@
+{
+  "game_id": "01KPGDD85JEM1JPT99N5A6FQ7A",
+  "mode": "multi_turn",
+  "updated_at": "2026-04-18T13:45:18+00:00",
+  "total": {
+    "input_tokens": 9088,
+    "cached_input_tokens": 0,
+    "output_tokens": 446,
+    "thinking_tokens": 0,
+    "cost_usd": 0.0016307999999999997,
+    "call_count": 10,
+    "unknown_pricing_calls": 0
+  },
+  "by_model": {
+    "OpenAI/gpt-4o-mini/standard": {
+      "input_tokens": 9088,
+      "cached_input_tokens": 0,
+      "output_tokens": 446,
+      "thinking_tokens": 0,
+      "cost_usd": 0.0016307999999999997,
+      "call_count": 10,
+      "unknown_pricing_calls": 0
+    }
+  },
+  "by_agent": {
+    "kanolab5": {
+      "input_tokens": 1580,
+      "cached_input_tokens": 0,
+      "output_tokens": 13,
+      "thinking_tokens": 0,
+      "cost_usd": 0.0002448,
+      "call_count": 2,
+      "unknown_pricing_calls": 0
+    },
+    "kanolab4": {
+      "input_tokens": 1834,
+      "cached_input_tokens": 0,
+      "output_tokens": 92,
+      "thinking_tokens": 0,
+      "cost_usd": 0.0003303,
+      "call_count": 2,
+      "unknown_pricing_calls": 0
+    },
+    "kanolab1": {
+      "input_tokens": 1913,
+      "cached_input_tokens": 0,
+      "output_tokens": 88,
+      "thinking_tokens": 0,
+      "cost_usd": 0.00033975,
+      "call_count": 2,
+      "unknown_pricing_calls": 0
+    },
+    "kanolab2": {
+      "input_tokens": 1782,
+      "cached_input_tokens": 0,
+      "output_tokens": 129,
+      "thinking_tokens": 0,
+      "cost_usd": 0.0003447,
+      "call_count": 2,
+      "unknown_pricing_calls": 0
+    },
+    "kanolab3": {
+      "input_tokens": 1979,
+      "cached_input_tokens": 0,
+      "output_tokens": 124,
+      "thinking_tokens": 0,
+      "cost_usd": 0.00037124999999999994,
+      "call_count": 2,
+      "unknown_pricing_calls": 0
+    }
+  },
+  "by_agent_model": {
+    "kanolab5": {
+      "OpenAI/gpt-4o-mini/standard": {
+        "input_tokens": 1580,
+        "cached_input_tokens": 0,
+        "output_tokens": 13,
+        "thinking_tokens": 0,
+        "cost_usd": 0.0002448,
+        "call_count": 2,
+        "unknown_pricing_calls": 0
+      }
+    },
+    "kanolab4": {
+      "OpenAI/gpt-4o-mini/standard": {
+        "input_tokens": 1834,
+        "cached_input_tokens": 0,
+        "output_tokens": 92,
+        "thinking_tokens": 0,
+        "cost_usd": 0.0003303,
+        "call_count": 2,
+        "unknown_pricing_calls": 0
+      }
+    },
+    "kanolab1": {
+      "OpenAI/gpt-4o-mini/standard": {
+        "input_tokens": 1913,
+        "cached_input_tokens": 0,
+        "output_tokens": 88,
+        "thinking_tokens": 0,
+        "cost_usd": 0.00033975,
+        "call_count": 2,
+        "unknown_pricing_calls": 0
+      }
+    },
+    "kanolab2": {
+      "OpenAI/gpt-4o-mini/standard": {
+        "input_tokens": 1782,
+        "cached_input_tokens": 0,
+        "output_tokens": 129,
+        "thinking_tokens": 0,
+        "cost_usd": 0.0003447,
+        "call_count": 2,
+        "unknown_pricing_calls": 0
+      }
+    },
+    "kanolab3": {
+      "OpenAI/gpt-4o-mini/standard": {
+        "input_tokens": 1979,
+        "cached_input_tokens": 0,
+        "output_tokens": 124,
+        "thinking_tokens": 0,
+        "cost_usd": 0.00037124999999999994,
+        "call_count": 2,
+        "unknown_pricing_calls": 0
+      }
+    }
+  },
+  "records": [
+    {
+      "ts": "2026-04-18T13:45:15+00:00",
+      "agent": "kanolab5",
+      "request": "initialize",
+      "label": "action",
+      "provider": "OpenAI",
+      "model_id": "gpt-4o-mini",
+      "pricing_mode": "standard",
+      "input_tokens": 772,
+      "cached_input_tokens": 0,
+      "output_tokens": 5,
+      "thinking_tokens": 0,
+      "cost_usd": 0.0001188,
+      "unknown_pricing": false
+    },
+    {
+      "ts": "2026-04-18T13:45:15+00:00",
+      "agent": "kanolab4",
+      "request": "initialize",
+      "label": "action",
+      "provider": "OpenAI",
+      "model_id": "gpt-4o-mini",
+      "pricing_mode": "standard",
+      "input_tokens": 883,
+      "cached_input_tokens": 0,
+      "output_tokens": 37,
+      "thinking_tokens": 0,
+      "cost_usd": 0.00015465,
+      "unknown_pricing": false
+    },
+    {
+      "ts": "2026-04-18T13:45:16+00:00",
+      "agent": "kanolab1",
+      "request": "initialize",
+      "label": "action",
+      "provider": "OpenAI",
+      "model_id": "gpt-4o-mini",
+      "pricing_mode": "standard",
+      "input_tokens": 921,
+      "cached_input_tokens": 0,
+      "output_tokens": 40,
+      "thinking_tokens": 0,
+      "cost_usd": 0.00016215,
+      "unknown_pricing": false
+    },
+    {
+      "ts": "2026-04-18T13:45:16+00:00",
+      "agent": "kanolab5",
+      "request": "daily_initialize",
+      "label": "action",
+      "provider": "OpenAI",
+      "model_id": "gpt-4o-mini",
+      "pricing_mode": "standard",
+      "input_tokens": 808,
+      "cached_input_tokens": 0,
+      "output_tokens": 8,
+      "thinking_tokens": 0,
+      "cost_usd": 0.000126,
+      "unknown_pricing": false
+    },
+    {
+      "ts": "2026-04-18T13:45:16+00:00",
+      "agent": "kanolab2",
+      "request": "initialize",
+      "label": "action",
+      "provider": "OpenAI",
+      "model_id": "gpt-4o-mini",
+      "pricing_mode": "standard",
+      "input_tokens": 859,
+      "cached_input_tokens": 0,
+      "output_tokens": 33,
+      "thinking_tokens": 0,
+      "cost_usd": 0.00014864999999999998,
+      "unknown_pricing": false
+    },
+    {
+      "ts": "2026-04-18T13:45:16+00:00",
+      "agent": "kanolab3",
+      "request": "initialize",
+      "label": "action",
+      "provider": "OpenAI",
+      "model_id": "gpt-4o-mini",
+      "pricing_mode": "standard",
+      "input_tokens": 949,
+      "cached_input_tokens": 0,
+      "output_tokens": 50,
+      "thinking_tokens": 0,
+      "cost_usd": 0.00017235,
+      "unknown_pricing": false
+    },
+    {
+      "ts": "2026-04-18T13:45:17+00:00",
+      "agent": "kanolab1",
+      "request": "daily_initialize",
+      "label": "action",
+      "provider": "OpenAI",
+      "model_id": "gpt-4o-mini",
+      "pricing_mode": "standard",
+      "input_tokens": 992,
+      "cached_input_tokens": 0,
+      "output_tokens": 48,
+      "thinking_tokens": 0,
+      "cost_usd": 0.00017759999999999998,
+      "unknown_pricing": false
+    },
+    {
+      "ts": "2026-04-18T13:45:17+00:00",
+      "agent": "kanolab4",
+      "request": "daily_initialize",
+      "label": "action",
+      "provider": "OpenAI",
+      "model_id": "gpt-4o-mini",
+      "pricing_mode": "standard",
+      "input_tokens": 951,
+      "cached_input_tokens": 0,
+      "output_tokens": 55,
+      "thinking_tokens": 0,
+      "cost_usd": 0.00017565000000000001,
+      "unknown_pricing": false
+    },
+    {
+      "ts": "2026-04-18T13:45:18+00:00",
+      "agent": "kanolab3",
+      "request": "daily_initialize",
+      "label": "action",
+      "provider": "OpenAI",
+      "model_id": "gpt-4o-mini",
+      "pricing_mode": "standard",
+      "input_tokens": 1030,
+      "cached_input_tokens": 0,
+      "output_tokens": 74,
+      "thinking_tokens": 0,
+      "cost_usd": 0.00019889999999999998,
+      "unknown_pricing": false
+    },
+    {
+      "ts": "2026-04-18T13:45:18+00:00",
+      "agent": "kanolab2",
+      "request": "daily_initialize",
+      "label": "action",
+      "provider": "OpenAI",
+      "model_id": "gpt-4o-mini",
+      "pricing_mode": "standard",
+      "input_tokens": 923,
+      "cached_input_tokens": 0,
+      "output_tokens": 96,
+      "thinking_tokens": 0,
+      "cost_usd": 0.00019604999999999997,
+      "unknown_pricing": false
+    }
+  ]
+}

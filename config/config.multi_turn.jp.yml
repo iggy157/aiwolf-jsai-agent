@@ -4,6 +4,10 @@
 
 llm:
   type: openai
+  # llm 直下でも model / temperature / pricing_mode / base_url を書けば
+  # 下のプロバイダセクション (openai:, anthropic: 等) の値を上書きする.
+  # 下の例では separate_langchain=true なので, この model は使われない.
+  # model: gpt-4o
   sleep_time: 0
   # trueにするとリクエスト種別ごとにLangChainとllm_message_historyを分離する.
   # 共通系 (initialize, daily_initialize, daily_finish) は両方に送信する.
@@ -11,10 +15,16 @@ llm:
   # アクション系 (vote, divine, guard, attack) は llm.action のモデルに送信する.
   # falseにするとllm.typeの単一モデル/履歴で従来通り動作する.
   separate_langchain: true
+  # talk / action には type の他に model / temperature / pricing_mode / base_url を直接書ける.
+  # 指定した項目は下の <provider>: セクションより優先される. 省略した項目は <provider>: から継承.
+  # これにより "同じ会社の違うモデル" (openai + gpt-5 / openai + gpt-4o-mini など) を
+  # talk と action に別々に当てられる. type を省略すると llm.type をデフォルトとして使う.
   talk:
-    type: anthropic
+    type: openai
+    model: gpt-4o
   action:
     type: openai
+    model: gpt-4o-mini
 
 openai:
   model: gpt-4o-mini

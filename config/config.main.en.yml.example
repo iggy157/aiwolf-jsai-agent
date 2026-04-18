@@ -23,6 +23,15 @@ headings:
   enabled: false
   style: markdown
 
+# Profile source.
+#   server → Use the free-form `info.profile` string sent by the server (legacy behavior).
+#   local  → Look up info.agent in data/profiles.<lang>.yml and render the detailed
+#            profile via identity.jinja. Assumes the server is running with
+#            custom_profile=true so that info.agent carries a character name
+#            (e.g. "Minato", "Sakura"). If no entry matches, falls back to server behavior.
+profile:
+  source: server
+
 configs:
   multi_turn: ./config.multi_turn.en.yml
   single_turn: ./config.single_turn.en.yml

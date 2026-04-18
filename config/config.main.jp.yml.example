@@ -21,6 +21,15 @@ headings:
   enabled: false
   style: markdown
 
+# プロフィールの供給元.
+#   server → サーバから info.profile として送られた文字列をそのまま使う (従来挙動).
+#   local  → data/profiles.<lang>.yml から info.agent で詳細プロフィールを引き,
+#            identity.jinja でリッチに描画する. サーバを custom_profile=true で動かし,
+#            info.agent にキャラクター名 (ミナト / Minato など) が入ることを想定する.
+#            profiles ファイルに一致する名前が無い場合は自動で server 挙動にフォールバックする.
+profile:
+  source: server
+
 configs:
   multi_turn: ./config.multi_turn.jp.yml
   single_turn: ./config.single_turn.jp.yml

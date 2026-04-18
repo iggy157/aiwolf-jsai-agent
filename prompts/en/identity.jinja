@@ -1,12 +1,36 @@
 {#-
   identity.jinja (English)
-  Character information sent by the server.
-  Info.profile is free-form text (may include name / age / gender / profile etc.);
-  the role is a separate Role enum.
-  Expects: info, role
+  - If local_profile is injected (config.profile.source=local + name match), render the
+    detailed data/profiles.en.yml profile in profile_encoding order (rich format).
+  - Otherwise, fall back to info.profile (the free-form string from the server).
+  - If neither is set, emit only the name and role.
+  Expects: info, role, local_profile?, profile_encoding?
 -#}
 Your name: {{ info.agent }}
 Your role: {{ role.value }}
-{% if info.profile is not none -%}
+{% if local_profile -%}
+{%- set sep = ", " -%}
+{%- for field, label in profile_encoding.items() -%}
+{%- set val = local_profile[field] if field in local_profile else none -%}
+{%- if val is none -%}
+{%- elif val is mapping -%}
+{{ label }}:
+{%- for k, v in val.items() %}
+  {{ k }}: {% if v is iterable and v is not string and v is not mapping %}{{ v | join(sep) }}{% else %}{{ v }}{% endif %}
+{%- endfor %}
+{% elif val is iterable and val is not string -%}
+{%- if val and val[0] is mapping and 'context' in val[0] -%}
+{{ label }}:
+{%- for ex in val %}
+  - ({{ ex.context }}) {{ ex.text }}
+{%- endfor %}
+{% else -%}
+{{ label }}: {{ val | join(sep) }}
+{% endif -%}
+{%- else -%}
+{{ label }}: {{ val }}
+{% endif -%}
+{%- endfor -%}
+{%- elif info.profile is not none -%}
 Your profile: {{ info.profile }}
 {% endif -%}

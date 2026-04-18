@@ -31,6 +31,7 @@ from aiwolf_nlp_common.packet import Info, Packet, Request, Role, Setting, Statu
 from utils.agent_logger import AgentLogger
 from utils.cost_logger import append_cost_record, render_markdown, resolve_game_log_dir
 from utils.cost_utils import CostRecord, PricingRow, build_record, load_pricing_table
+from utils.profile import load_profile_data, resolve_profile
 from utils.stoppable_thread import StoppableThread
 
 if TYPE_CHECKING:
@@ -509,6 +510,26 @@ class Agent:
             return str(self.info.game_id)
         return self.game_id_cache
 
+    def _resolve_local_profile(
+        self, lang: str,
+    ) -> tuple[dict[str, Any] | None, dict[str, str] | None]:
+        """Return (local_profile, profile_encoding) honoring config.profile.source.
+
+        config.profile.source == "local" のとき, info.agent で data/profiles.<lang>.yml を
+        参照し, マッチすればそのエントリと profile_encoding を返す. マッチしない
+        あるいは source != "local" のときは (None, None) を返す. 呼び出し側では
+        identity.jinja の分岐で自動的に info.profile 文字列にフォールバックする.
+        """
+        profile_source = str((self.config.get("profile") or {}).get("source", "server"))
+        if profile_source != "local":
+            return None, None
+        agent_name = self.info.agent if self.info is not None else None
+        local_profile = resolve_profile(lang, agent_name)
+        if local_profile is None:
+            return None, None
+        _, profile_encoding = load_profile_data(lang)
+        return local_profile, profile_encoding
+
     def _send_message_to_llm(self, request: Request | None) -> str | None:
         """Send message to LLM and get response.
 
@@ -532,6 +553,8 @@ class Agent:
         prompt = self.config["prompt"][request_key]
         if float(self.config["llm"]["sleep_time"]) > 0:
             sleep(float(self.config["llm"]["sleep_time"]))
+        lang = str(self.config.get("lang", "jp"))
+        local_profile, profile_encoding = self._resolve_local_profile(lang)
         key = {
             "info": self.info,
             "setting": self.setting,
@@ -544,8 +567,10 @@ class Agent:
             "mode": self.config.get("mode", "multi_turn"),
             "request_key": request_key,
             "headings": self.config.get("headings") or {},
+            "local_profile": local_profile,
+            "profile_encoding": profile_encoding,
         }
-        env = _get_jinja_env(str(self.config.get("lang", "jp")))
+        env = _get_jinja_env(lang)
         template = env.from_string(prompt)
         prompt = template.render(**key).strip()
         targets = self._resolve_targets(request)

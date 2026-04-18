@@ -31,6 +31,7 @@ from aiwolf_nlp_common.packet import Info, Packet, Request, Role, Setting, Statu
 from utils.agent_logger import AgentLogger
 from utils.cost_logger import append_cost_record, render_markdown, resolve_game_log_dir
 from utils.cost_utils import CostRecord, PricingRow, build_record, load_pricing_table
+from utils.daily_objective import resolve_objective
 from utils.profile import load_profile_data, resolve_profile
 from utils.stoppable_thread import StoppableThread
 
@@ -555,6 +556,12 @@ class Agent:
             sleep(float(self.config["llm"]["sleep_time"]))
         lang = str(self.config.get("lang", "jp"))
         local_profile, profile_encoding = self._resolve_local_profile(lang)
+        # 役職別・日別の目標を data/daily_objectives.<lang>.yml から解決. jinja の
+        # daily_objective.jinja はこの文字列をそのまま出力する. 未解決 (役職未判定
+        # や info 未着) のときは None が入り, jinja 側で空出力になる.
+        day = self.info.day if self.info is not None else None
+        role_name = self.role.value if self.role is not None else None
+        daily_objective_text = resolve_objective(lang, role_name, day)
         key = {
             "info": self.info,
             "setting": self.setting,
@@ -569,6 +576,7 @@ class Agent:
             "headings": self.config.get("headings") or {},
             "local_profile": local_profile,
             "profile_encoding": profile_encoding,
+            "daily_objective": daily_objective_text,
         }
         env = _get_jinja_env(lang)
         template = env.from_string(prompt)

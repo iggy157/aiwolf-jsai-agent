@@ -58,6 +58,7 @@ prompt:
     {% set history_start = 0 -%}
     {{ block('history') }}
 
+    {{ block('daily_objective') }}
     {{ block('instruction') }}
     {{ block('constraints') }}
   whisper: |-

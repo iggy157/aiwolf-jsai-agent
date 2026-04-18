@@ -1,0 +1,12 @@
+{#-
+  daily_objective.jinja (English)
+  Renders the role- and day-specific primary objective for the current day.
+  Content comes from data/daily_objectives.en.yml, resolved in Python by
+  src/utils/daily_objective.resolve_objective and injected into the render
+  context as `daily_objective`. When the role is not yet known or no entry
+  matches, the value is None and this block produces no output.
+  Expects: daily_objective (str | None)
+-#}
+{% if daily_objective -%}
+{{ daily_objective }}
+{%- endif -%}

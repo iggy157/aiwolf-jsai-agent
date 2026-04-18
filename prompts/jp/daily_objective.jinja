@@ -1,0 +1,11 @@
+{#-
+  daily_objective.jinja
+  役職別・日別の本日の主要目標を表示する.
+  data/daily_objectives.jp.yml の内容を src/utils/daily_objective.resolve_objective が
+  解決し, render context に daily_objective 文字列として注入される.
+  役職未判定や該当エントリが無い場合は None が入っており, このブロックは空出力になる.
+  Expects: daily_objective (str | None)
+-#}
+{% if daily_objective -%}
+{{ daily_objective }}
+{%- endif -%}

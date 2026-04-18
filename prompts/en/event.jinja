@@ -49,3 +49,16 @@ Day {{ info.day }}
 {% if info.attack_vote_list is not none %}Attack votes: {{ fmt_votes(info.attack_vote_list) }}
 {% endif -%}
 {% endif -%}
+{%- if info is not none and info.status_map is not none -%}
+{#- Alive / dead summary. status_map values are Status enum ('ALIVE' / 'DEAD'). -#}
+{%- set ns = namespace(alive=[], dead=[]) -%}
+{%- for name, s in info.status_map.items() -%}
+{%- if s == 'ALIVE' -%}{%- set ns.alive = ns.alive + [name] -%}
+{%- else -%}{%- set ns.dead = ns.dead + [name] -%}
+{%- endif -%}
+{%- endfor -%}
+Alive ({{ ns.alive | length }}): {{ ns.alive | join(', ') }}
+{% if ns.dead -%}
+Dead ({{ ns.dead | length }}): {{ ns.dead | join(', ') }}
+{% endif -%}
+{%- endif -%}

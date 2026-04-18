@@ -49,3 +49,16 @@ Day {{ info.day }}
 {% if info.attack_vote_list is not none %}襲撃投票: {{ fmt_votes(info.attack_vote_list) }}
 {% endif -%}
 {% endif -%}
+{%- if info is not none and info.status_map is not none -%}
+{#- 生存/非生存のサマリ. status_map の値は Status enum ('ALIVE' / 'DEAD'). -#}
+{%- set ns = namespace(alive=[], dead=[]) -%}
+{%- for name, s in info.status_map.items() -%}
+{%- if s == 'ALIVE' -%}{%- set ns.alive = ns.alive + [name] -%}
+{%- else -%}{%- set ns.dead = ns.dead + [name] -%}
+{%- endif -%}
+{%- endfor -%}
+生存者 ({{ ns.alive | length }}人): {{ ns.alive | join('、') }}
+{% if ns.dead -%}
+非生存者 ({{ ns.dead | length }}人): {{ ns.dead | join('、') }}
+{% endif -%}
+{%- endif -%}

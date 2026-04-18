@@ -9,3 +9,4 @@ identity: 話者情報
 event: イベント
 constraints: 出力制約
 daily_objective: 本日の目標
+game_state: ゲーム状況

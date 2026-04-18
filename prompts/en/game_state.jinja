@@ -1,0 +1,19 @@
+{#-
+  game_state.jinja (English)
+  Shows the current game state: day number and remaining talk/whisper turns.
+  info.remain_count is only set by the server on TALK / WHISPER requests;
+  for other requests only the day number is shown.
+  Expects: info, request_key?
+-#}
+{% if info is not none -%}
+{%- if info.day is not none -%}
+Day: {{ info.day }}
+{% endif -%}
+{%- if info.remain_count is not none -%}
+{%- if request_key == 'whisper' -%}
+Remaining whisper turns: {{ info.remain_count }}
+{%- else -%}
+Remaining talk turns: {{ info.remain_count }}
+{%- endif %}
+{% endif -%}
+{%- endif -%}

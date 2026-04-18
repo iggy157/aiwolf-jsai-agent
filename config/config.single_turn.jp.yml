@@ -53,6 +53,7 @@ anthropic:
 prompt:
   talk: |-
     {{ block('identity') }}
+    {{ block('game_state') }}
 
     # 日次イベント
     {{ block('event') }}
@@ -67,6 +68,7 @@ prompt:
     {{ block('constraints') }}
   whisper: |-
     {{ block('identity') }}
+    {{ block('game_state') }}
 
     # 日次イベント
     {{ block('event') }}

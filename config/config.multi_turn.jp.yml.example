@@ -67,12 +67,14 @@ prompt:
     {% set history_start = sent_talk_count -%}
     {{ block('history') }}
   talk: |-
+    {{ block('game_state') }}
     {% set history_source = talk_history -%}
     {% set history_start = sent_talk_count -%}
     {{ block('history') }}
     {{ block('instruction') }}
     {{ block('constraints') }}
   whisper: |-
+    {{ block('game_state') }}
     {% set history_source = whisper_history -%}
     {% set history_start = sent_whisper_count -%}
     {{ block('history') }}

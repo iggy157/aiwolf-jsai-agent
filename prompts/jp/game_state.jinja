@@ -1,0 +1,19 @@
+{#-
+  game_state.jinja
+  現在のゲーム状況 (日数・トーク/囁きの残りターン数) を表示する.
+  info.remain_count は TALK / WHISPER リクエスト時のみサーバから設定されるため,
+  それ以外のリクエストでは日数のみ表示される.
+  Expects: info, request_key?
+-#}
+{% if info is not none -%}
+{%- if info.day is not none -%}
+現在: {{ info.day }} 日目
+{% endif -%}
+{%- if info.remain_count is not none -%}
+{%- if request_key == 'whisper' -%}
+残り囁き回数: {{ info.remain_count }}
+{%- else -%}
+残りトーク回数: {{ info.remain_count }}
+{%- endif %}
+{% endif -%}
+{%- endif -%}

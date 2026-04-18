@@ -1,6 +1,6 @@
 # Prompt Preview
 
-- Generated: 2026-04-19T00:43:06
+- Generated: 2026-04-19T00:52:45
 - Sample data: `data/sample_packet.yml`
 - Languages: `en`, `jp`
 
@@ -107,9 +107,12 @@ Day 2 (daily_initialize)
 
 ### `talk`
 
-- Length: 296 chars
+- Length: 326 chars
 
 ```
+### ゲーム状況
+現在: 2 日目
+残りトーク回数: 3
 ### 履歴
 リュウジ: 昨日の投票で ケンジ が追放されましたね。次が肝心です。
 ダイスケ: 私は タクミ が少し不自然に感じました。
@@ -124,9 +127,12 @@ Day 2 (daily_initialize)
 
 ### `whisper`
 
-- Length: 290 chars
+- Length: 319 chars
 
 ```
+### ゲーム状況
+現在: 2 日目
+残り囁き回数: 3
 ### 履歴
 ミナト: 今日は ケンジ を狙うのが安全そうだね。
 リュウジ: 賛成。村側に疑われないよう表では別の話題を振ろう。
@@ -219,7 +225,7 @@ Day 2 (daily_initialize)
 
 ### `talk`
 
-- Length: 1737 chars
+- Length: 1767 chars
 
 ```
 ### 話者情報
@@ -267,6 +273,9 @@ Day 2 (daily_initialize)
   - （投票宣言）ぼくは…うーん、02くんに入れるね。なんとなくだけど…ごめんね
   - （同意）うんうん、ぼくもそう思う！
   - （反論）あ、でも…それはちょっと違うかもって、ぼくは思ったんだ
+### ゲーム状況
+現在: 2 日目
+残りトーク回数: 3
 
 # 日次イベント
 ### イベント
@@ -296,7 +305,7 @@ Day 2 (daily_initialize)
 
 ### `whisper`
 
-- Length: 1618 chars
+- Length: 1647 chars
 
 ```
 ### 話者情報
@@ -344,6 +353,9 @@ Day 2 (daily_initialize)
   - （投票宣言）ぼくは…うーん、02くんに入れるね。なんとなくだけど…ごめんね
   - （同意）うんうん、ぼくもそう思う！
   - （反論）あ、でも…それはちょっと違うかもって、ぼくは思ったんだ
+### ゲーム状況
+現在: 2 日目
+残り囁き回数: 3
 
 # 日次イベント
 ### イベント
@@ -731,9 +743,11 @@ Daisuke: 私は Takumi が少し不自然に感じました。
 
 ### `talk`
 
-- Length: 429 chars
+- Length: 460 chars
 
 ```
+Day: 2
+Remaining talk turns: 3
 Ryuji: 昨日の投票で Kenji が追放されましたね。次が肝心です。
 Daisuke: 私は Takumi が少し不自然に感じました。
 This is a talk request on day 2. Output what you should say in the game.
@@ -745,9 +759,11 @@ If you have nothing more to say, output "Over".
 
 ### `whisper`
 
-- Length: 431 chars
+- Length: 465 chars
 
 ```
+Day: 2
+Remaining whisper turns: 3
 Minato: 今日は Kenji を狙うのが安全そうだね。
 Ryuji: 賛成。村側に疑われないよう表では別の話題を振ろう。
 This is a whisper request on day 2. Output your whisper to fellow werewolves.
@@ -829,7 +845,7 @@ Output only the target agent name. Do not add explanations, reasons, symbols, or
 
 ### `talk`
 
-- Length: 913 chars
+- Length: 944 chars
 
 ```
 Your name: Minato
@@ -837,6 +853,8 @@ Your role: SEER
 Your profile: 年齢: 10
 性別: 男性
 性格: Minatoはおっとりした性格で...
+Day: 2
+Remaining talk turns: 3
 
 # Daily events
 Day 1 (daily_finish)
@@ -861,7 +879,7 @@ If you have nothing more to say, output "Over".
 
 ### `whisper`
 
-- Length: 696 chars
+- Length: 730 chars
 
 ```
 Your name: Minato
@@ -869,6 +887,8 @@ Your role: SEER
 Your profile: 年齢: 10
 性別: 男性
 性格: Minatoはおっとりした性格で...
+Day: 2
+Remaining whisper turns: 3
 
 # Daily events
 Day 1 (daily_finish)

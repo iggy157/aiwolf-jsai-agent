@@ -16,7 +16,7 @@ Vote request. Output only the name of the agent to vote for.
 {% elif request_key == 'attack' -%}
 Attack request. Output only the name of the agent to attack.
 {% elif request_key == 'initialize' -%}
-Game initialize request. Respond appropriately in English to subsequent requests.
+Game initialize request. Respond appropriately in English to subsequent requests. Your response is sent directly to the game; do not include unnecessary content.
 {% elif request_key == 'daily_initialize' -%}
 Day {{ info.day }} has started.
 {% elif request_key == 'daily_finish' -%}

@@ -16,7 +16,7 @@
 {% elif request_key == 'attack' -%}
 襲撃リクエストです。襲撃対象のエージェント名のみを出力してください。
 {% elif request_key == 'initialize' -%}
-ゲーム開始リクエストです。以降のリクエストに対し日本語で適切に応答してください。
+ゲーム開始リクエストです。以降のリクエストに対し日本語で適切に応答してください。レスポンスはそのままゲームに送信されるため, 不要な情報を含めないでください。
 {% elif request_key == 'daily_initialize' -%}
 {{ info.day }}日目が始まりました。
 {% elif request_key == 'daily_finish' -%}

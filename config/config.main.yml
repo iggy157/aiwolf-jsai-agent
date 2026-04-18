@@ -1,0 +1,41 @@
+# メイン設定ファイル.
+# モード (multi_turn / single_turn) と共通設定 (web_socket / agent / log) を定義する.
+# モード固有の設定 (llm / prompt) は configs で指定された子configファイルから読み込まれ,
+# このファイルとマージされる. キー衝突時は子configの値が優先される.
+
+mode: multi_turn
+# プロンプトブロック (prompts/<lang>/) の言語. jp / en.
+lang: jp
+
+configs:
+  multi_turn: ./config.multi_turn.jp.yml
+  single_turn: ./config.single_turn.jp.yml
+
+web_socket:
+  url: ws://127.0.0.1:8080/ws
+  token:
+  auto_reconnect: false
+
+agent:
+  num: 5
+  team: kanolab
+  kill_on_timeout: true
+
+log:
+  console_output: true
+  file_output: true
+  output_dir: ./log
+  level: debug
+
+  request:
+    name: false
+    initialize: false
+    daily_initialize: false
+    whisper: true
+    talk: true
+    daily_finish: false
+    divine: true
+    guard: true
+    vote: true
+    attack: true
+    finish: false

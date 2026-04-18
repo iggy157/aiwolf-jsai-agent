@@ -1,0 +1,102 @@
+# Multi-turn モード用の子設定ファイル.
+# LLMプロバイダ・モデル・プロンプト定義を含む.
+# メインconfigの mode が multi_turn のときに読み込まれる.
+
+llm:
+  type: google
+  sleep_time: 3
+  # trueにするとリクエスト種別ごとにLangChainとllm_message_historyを分離する.
+  # 共通系 (initialize, daily_initialize, daily_finish) は両方に送信する.
+  # 発話系 (talk, whisper) は llm.talk のモデルに送信する.
+  # アクション系 (vote, divine, guard, attack) は llm.action のモデルに送信する.
+  # falseにするとllm.typeの単一モデル/履歴で従来通り動作する.
+  separate_langchain: false
+  talk:
+    type: google
+  action:
+    type: claude
+
+openai:
+  model: gpt-4o-mini
+  temperature: 0.7
+
+google:
+  model: gemini-2.0-flash-lite
+  temperature: 0.7
+
+vertexai:
+  model: gemini-2.0-flash-lite
+  temperature: 0.7
+
+ollama:
+  model: llama3.1
+  temperature: 0.7
+  base_url: http://localhost:11434
+
+claude:
+  model: claude-opus-4-5-20251101
+  temperature: 1.0
+
+# multi-turn モードでは LLM の会話履歴 (llm_message_history) が LangChain 側で保持されるため,
+# 各リクエストのプロンプトは最低限のワンラインで足りる.
+# ただし llm.separate_langchain=true の場合は talk系 / action系 LangChain が分離され履歴が共有されないため,
+# 共通リクエスト (initialize / daily_initialize / daily_finish) のプロンプトで identity / event ブロックを
+# include し, 両系統に最低限の情報共有を行う.
+prompt:
+  initialize: |-
+    {% include 'identity.jinja' %}
+    {% include 'instruction.jinja' %}
+    以降のリクエストには日本語で応答してください。レスポンスはそのままゲームに送信されるため, 不要な情報を含めないでください。
+  daily_initialize: |-
+    {% include 'instruction.jinja' %}
+    {% include 'event.jinja' %}
+  daily_finish: |-
+    {% include 'instruction.jinja' %}
+    {% include 'event.jinja' %}
+    {% set history_source = talk_history -%}
+    {% set history_start = sent_talk_count -%}
+    {% include 'history.jinja' %}
+  talk: |-
+    {% set history_source = talk_history -%}
+    {% set history_start = sent_talk_count -%}
+    {% include 'history.jinja' %}
+    {% include 'instruction.jinja' %}
+    {% include 'constraints.jinja' %}
+  whisper: |-
+    {% set history_source = whisper_history -%}
+    {% set history_start = sent_whisper_count -%}
+    {% include 'history.jinja' %}
+    {% include 'instruction.jinja' %}
+    {% include 'constraints.jinja' %}
+  divine: |-
+    {% include 'instruction.jinja' %}
+    対象:
+    {% for k, v in info.status_map.items() -%}
+    {%- if v == 'ALIVE' %}{{ k }}
+    {% endif -%}
+    {%- endfor %}
+    {% include 'constraints.jinja' %}
+  guard: |-
+    {% include 'instruction.jinja' %}
+    対象:
+    {% for k, v in info.status_map.items() -%}
+    {%- if v == 'ALIVE' %}{{ k }}
+    {% endif -%}
+    {%- endfor %}
+    {% include 'constraints.jinja' %}
+  vote: |-
+    {% include 'instruction.jinja' %}
+    対象:
+    {% for k, v in info.status_map.items() -%}
+    {%- if v == 'ALIVE' %}{{ k }}
+    {% endif -%}
+    {%- endfor %}
+    {% include 'constraints.jinja' %}
+  attack: |-
+    {% include 'instruction.jinja' %}
+    対象:
+    {% for k, v in info.status_map.items() -%}
+    {%- if v == 'ALIVE' %}{{ k }}
+    {% endif -%}
+    {%- endfor %}
+    {% include 'constraints.jinja' %}

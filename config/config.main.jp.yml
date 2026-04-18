@@ -18,7 +18,7 @@ lang: jp
 #   dash     → "- 履歴"
 # 見出し文字列は prompts/<lang>/_labels.yml で定義 (未定義ならファイル名をそのまま使用).
 headings:
-  enabled: false
+  enabled: true
   style: markdown
 
 configs:

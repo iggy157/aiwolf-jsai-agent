@@ -3,7 +3,7 @@
 # メインconfigの mode が multi_turn のときに読み込まれる.
 
 llm:
-  type: openai
+  type: anthropic
   # llm 直下でも model / temperature / pricing_mode / base_url を書けば
   # 下のプロバイダセクション (openai:, anthropic: 等) の値を上書きする.
   # 下の例では separate_langchain=true なので, この model は使われない.
@@ -20,11 +20,18 @@ llm:
   # これにより "同じ会社の違うモデル" (openai + gpt-5 / openai + gpt-4o-mini など) を
   # talk と action に別々に当てられる. type を省略すると llm.type をデフォルトとして使う.
   talk:
-    type: openai
-    model: gpt-5.2
+    type: anthropic
+    model: claude-opus-4-5
   action:
     type: openai
-    model: gpt-4o-mini
+    model: gpt-5.2
+  # llm.thread: スレッド機能 (Step A 判断 + inference=llm 時の thread 割当) で使う第3系統.
+  # 常に stateless (履歴なし) で動作し, separate_langchain の値には依存しない.
+  # 軽量モデルを当てるとコスト・レイテンシを抑えられる.
+  # thread.enabled=false のときは読まれない. type を省略すると llm.type をデフォルトとして使う.
+  thread:
+    type: openai
+    model: gpt-5.2
 
 openai:
   model: gpt-4o-mini
@@ -46,6 +53,17 @@ ollama:
 anthropic:
   model: claude-opus-4-5-20251101
   temperature: 1.0
+
+# スレッド機能 (talk 履歴を自動でスレッド化し, より整理された形で LLM に渡す).
+# - enabled: false なら従来挙動 (フラットな history) のまま.
+# - inference: heuristic (LLM 不使用, 決定論) | llm (P5 で追加, llm.thread で推定).
+# - history_days: null なら全 day 保持表示, 整数 N なら直近 N 日のみプロンプトに渡す.
+# 構造ログ (log/<game>/thread_structure/<agent>.jsonl) は log.file_output と
+# thread.enabled の両方が true のときに自動出力される.
+thread:
+  enabled: true
+  inference: llm
+  history_days: null
 
 # multi-turn モードでは LLM の会話履歴 (llm_message_history) が LangChain 側で保持されるため,
 # 各リクエストのプロンプトは最低限のワンラインで足りる.
@@ -69,9 +87,15 @@ prompt:
     {{ block('history') }}
   talk: |-
     {{ block('game_state') }}
+    {% if thread_enabled -%}
+    {{ block('thread_summary') }}
+    {{ block('thread_diff') }}
+    {{ block('thread_context') }}
+    {%- else -%}
     {% set history_source = talk_history -%}
     {% set history_start = sent_talk_count -%}
     {{ block('history') }}
+    {%- endif %}
     {{ block('instruction') }}
     {{ block('constraints') }}
   whisper: |-

@@ -1,0 +1,11 @@
+# Broadcast keyword list (English).
+# HeuristicThreadInference does a simple substring match against talk.text.
+# A hit means the talk is treated as a broadcast thread root / append.
+
+keywords:
+  - everyone
+  - everybody
+  - all of you
+  - y'all
+  - folks
+  - to all

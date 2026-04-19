@@ -1,0 +1,19 @@
+{#-
+  thread_diff.jinja
+  multi-turn モード用: 直前の talk() 以降に追加された talk のみを,
+  紐付くスレッドのタグ付きで列挙する.
+  Expects:
+    - new_talks_with_threads: list[(Talk, Thread)]
+      (ThreadManager.new_talks_since_last_read の戻り値)
+  各行: [T<id>] <agent>: <text>
+  本文側の過去履歴は LLM の会話履歴に残っているため, ここでは差分のみを示す.
+  全スレッドの最新メタ情報は thread_summary.jinja 側で別途渡す.
+-#}
+{%- if not new_talks_with_threads -%}
+(新着発話なし)
+{%- else -%}
+{%- for talk, thr in new_talks_with_threads -%}
+{%- set tag = '[T' ~ thr.id ~ ('*' if thr.is_broadcast else '') ~ ']' -%}
+{{ tag }} {{ talk.agent }}: {{ talk.text }}
+{% endfor -%}
+{%- endif -%}

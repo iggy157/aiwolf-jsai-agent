@@ -1,0 +1,45 @@
+# Role-relevant keyword dictionary (English).
+# HeuristicThreadInference / ThreadManager does substring match against talk.text
+# to set Thread.role_relevant when self's role matches.
+
+WEREWOLF:
+  - werewolf
+  - wolf
+  - attack
+  - bite
+  - kill at night
+  - fake seer
+
+POSSESSED:
+  - possessed
+  - cultist
+  - fake claim
+  - fake seer
+
+SEER:
+  - seer
+  - divine
+  - divination
+  - fortune teller
+  - black result
+  - white result
+
+MEDIUM:
+  - medium
+  - psychic
+  - corpse
+  - dead body
+  - black result
+  - white result
+
+BODYGUARD:
+  - bodyguard
+  - guard
+  - knight
+  - protect
+
+VILLAGER:
+  - villager
+  - vote
+  - lynch
+  - execute

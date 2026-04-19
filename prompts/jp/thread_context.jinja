@@ -1,0 +1,18 @@
+{#-
+  thread_context.jinja
+  Step A (ThreadDecision) の判断結果を Step B (発話生成) のプロンプトに注入する.
+  Expects:
+    - thread_decision: dict | None (Step A 出力. None なら何も出力しない)
+        keys: target_thread (int|None), action (str), reason (str)
+  skip / over は talk() 側でショートカット return するためここには来ない想定 (来ても無害).
+-#}
+{%- if thread_decision is defined and thread_decision -%}
+{%- set act = thread_decision.action -%}
+{%- if act == 'reply' and thread_decision.target_thread is not none -%}
+方針: スレッド [T{{ thread_decision.target_thread }}] に返信する形で発話してください。
+{% if thread_decision.reason -%}理由: {{ thread_decision.reason }}{%- endif %}
+{%- elif act == 'new_thread' -%}
+方針: 新しいスレッドを立てる形で発話してください。
+{% if thread_decision.reason -%}理由: {{ thread_decision.reason }}{%- endif %}
+{%- endif -%}
+{%- endif -%}

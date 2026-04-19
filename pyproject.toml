@@ -32,7 +32,10 @@ keywords = ["aiwolf"]
 Homepage = "https://aiwolfdial.github.io/aiwolf-nlp/"
 
 [dependency-groups]
-dev = ["pyright>=1.1.402", "ruff>=0.12.1"]
+dev = [
+    "pyright>=1.1.402",
+    "ruff>=0.12.1",
+]
 lint = ["ruff>=0.12.1"]
 
 [tool.pyright]

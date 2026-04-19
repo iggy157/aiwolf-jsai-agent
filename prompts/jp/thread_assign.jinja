@@ -1,0 +1,28 @@
+{#-
+  thread_assign.jinja
+  LLMThreadInference 用のプロンプト. 1 件の新着 talk が, 既存スレッド一覧の
+  どれに属するか / 新規スレッドを立てるか を JSON で答えさせる.
+  Expects:
+    - talk: 新着 Talk
+    - threads: 現在のスレッド一覧
+  出力スキーマ:
+    {"action": "existing", "thread_id": <int>, "reason": "..."}
+    {"action": "new",      "is_broadcast": <true|false>, "title": "<短文>", "reason": "..."}
+-#}
+新着発話を分類してください。
+
+# 新着発話
+- agent: {{ talk.agent }} (day{{ talk.day }} / turn{{ talk.turn }} / idx{{ talk.idx }})
+- text: {{ talk.text }}
+
+# 現在のスレッド一覧
+{{ block('thread_summary') }}
+
+# 出力
+- 既存スレッドへ追加: {"action": "existing", "thread_id": <既存ID>, "reason": "<短い理由>"}
+- 新規スレッド: {"action": "new", "is_broadcast": <true|false>, "title": "<短い話題名>", "reason": "<短い理由>"}
+  - is_broadcast: 全員宛て / 全体通知の場合は true, それ以外は false
+  - title: このスレッドの話題を端的に表す 20 字以内の短文.
+           発話の内容 (何について議論しているか) を反映させてください.
+           例: "Agent5の占い候補議論", "自己紹介", "ダイスケへの質問", "朝の挨拶".
+JSON 1 行のみを出力してください。コードフェンスや前置きは不要です。

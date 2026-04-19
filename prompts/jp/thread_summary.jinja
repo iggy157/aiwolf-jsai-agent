@@ -1,0 +1,19 @@
+{#-
+  thread_summary.jinja
+  全スレッドの見出し一覧 (1 行 / スレッド) を表示する.
+  Expects:
+    - threads: list[Thread] (ThreadManager.filtered_threads の戻り値)
+  各行: [T<id>] "<title>" 参加:<agents> 自分宛:yes/no 役職関連:yes/-
+  broadcast スレッドは [T<id>*] のように * を付ける.
+-#}
+{%- if not threads -%}
+(まだスレッドはありません)
+{%- else -%}
+{%- for t in threads -%}
+{%- set tag = '[T' ~ t.id ~ ('*' if t.is_broadcast else '') ~ ']' -%}
+{%- set parts = (t.participants | sort | join(',')) if t.participants else '(なし)' -%}
+{%- set self_flag = 'yes' if t.mentions_self else 'no' -%}
+{%- set role_flag = 'yes' if t.role_relevant else '-' -%}
+{{ tag }} "{{ t.title }}" 参加:{{ parts }} 自分宛:{{ self_flag }} 役職関連:{{ role_flag }} day{{ t.last_active_day }}/turn{{ t.last_active_turn }}
+{% endfor -%}
+{%- endif -%}

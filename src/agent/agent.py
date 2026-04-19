@@ -28,6 +28,17 @@ if TYPE_CHECKING:
 
 from aiwolf_nlp_common.packet import Info, Packet, Request, Role, Setting, Status, Talk
 
+from thread import (
+    THREAD_STRUCTURE_SUBDIR,
+    HeuristicThreadInference,
+    LLMThreadInference,
+    StepADecision,
+    StructureLogger,
+    ThreadDecision,
+    ThreadInference,
+    ThreadManager,
+    render_markdown_summary,
+)
 from utils.agent_logger import AgentLogger
 from utils.cost_logger import append_cost_record, render_markdown, resolve_game_log_dir
 from utils.cost_utils import CostRecord, PricingRow, build_record, load_pricing_table
@@ -188,6 +199,17 @@ class Agent:
         # Game IDはINITIALIZEパケット受信時にself.infoから取得できる.
         self.game_id_cache: str = game_id
 
+        # Thread feature: enabled when config.thread.enabled is true.
+        # スレッド機能: config.thread.enabled が true のときに有効.
+        # ThreadManager と StructureLogger は initialize() で setting / info を見て生成する
+        # (info.role_map / status_map が必要なため). 無効時は両方とも None のまま.
+        self.thread_manager: ThreadManager | None = None
+        self._thread_structure_logger: StructureLogger | None = None
+        # llm.thread 系統 (常に stateless: 履歴を持たない). Step A 判断と P5 の LLM 推定で使う.
+        self.llm_model_thread: BaseChatModel | None = None
+        self.llm_meta_thread: dict[str, str] | None = None
+        self._thread_decision: ThreadDecision | None = None
+
         load_dotenv(Path(__file__).parent.joinpath("./../../config/.env"))
 
     def _is_separate_langchain(self) -> bool:
@@ -210,6 +232,62 @@ class Agent:
             bool: True if single-turn / single-turnの場合はTrue
         """
         return str(self.config.get("mode", "multi_turn")) == "single_turn"
+
+    def _thread_config(self) -> dict[str, Any]:
+        """Return the ``thread`` section of config as a dict (empty if absent).
+
+        config の ``thread`` セクションを dict で返す. 未指定なら空 dict.
+        """
+        section = self.config.get("thread") or {}
+        return section if isinstance(section, dict) else {}
+
+    def _is_thread_enabled(self) -> bool:
+        """Return whether the thread feature is enabled.
+
+        スレッド機能が有効かを返す. デフォルトは False (後方互換).
+        """
+        return bool(self._thread_config().get("enabled", False))
+
+    def _thread_history_days(self) -> int | None:
+        """Return ``thread.history_days`` (None for unlimited).
+
+        ``thread.history_days`` を返す. None または欠如時は無制限 (全 day 保持表示).
+        """
+        cfg = self._thread_config()
+        if "history_days" not in cfg:
+            return None
+        value = cfg.get("history_days")
+        if value is None:
+            return None
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+
+    def _build_thread_context(self) -> dict[str, Any]:
+        """Build the threading-related part of the prompt context.
+
+        プロンプトコンテキストのうちスレッド機能関連部分を組み立てる. 機能無効時は
+        ``thread_enabled=False`` のみを返し, 既存テンプレートが従来 history を描画する
+        ようにする. 有効時は ``threads`` (history_days で絞った snapshot) と
+        ``new_talks_with_threads`` (multi-turn 差分用) を併せて返す.
+
+        Returns:
+            dict[str, Any]: Context fragment / コンテキスト断片
+        """
+        if not self._is_thread_enabled() or self.thread_manager is None:
+            return {"thread_enabled": False}
+        current_day = self.info.day if self.info is not None else 0
+        threads = self.thread_manager.filtered_threads(
+            current_day=current_day,
+            history_days=self._thread_history_days(),
+        )
+        new_pairs = self.thread_manager.new_talks_since_last_read(self.talk_history)
+        return {
+            "thread_enabled": True,
+            "threads": threads,
+            "new_talks_with_threads": new_pairs,
+        }
 
     @staticmethod
     def timeout(func: Callable[P, T]) -> Callable[P, T]:
@@ -276,12 +354,14 @@ class Agent:
             self.setting = packet.setting
         if packet.talk_history:
             self.talk_history.extend(packet.talk_history)
+            self._feed_thread_manager(packet.talk_history)
         if packet.whisper_history:
             self.whisper_history.extend(packet.whisper_history)
 
         # グループチャット方式
         if packet.new_talk:
             self.talk_history.append(packet.new_talk)
+            self._feed_thread_manager([packet.new_talk])
             self.on_talk_received(packet.new_talk)
         if packet.new_whisper:
             self.whisper_history.append(packet.new_whisper)
@@ -307,7 +387,33 @@ class Agent:
                     "attack_vote_list": packet.info.attack_vote_list,
                 },
             )
+        # daily_finish 時に当日の全スレッド snapshot を構造ログに残す.
+        if (
+            self.request == Request.DAILY_FINISH
+            and self.thread_manager is not None
+            and self._thread_structure_logger is not None
+            and packet.info is not None
+        ):
+            self._thread_structure_logger.log_eod_snapshot(
+                day=packet.info.day,
+                threads_snapshot=self.thread_manager.threads(),
+            )
         self.agent_logger.logger.debug(packet)
+
+    def _feed_thread_manager(self, talks: list[Talk]) -> None:
+        """Forward incoming talks to ``ThreadManager`` (no-op if disabled).
+
+        着信 talk を ``ThreadManager`` に流し込む. 機能無効時は no-op.
+        ``ThreadManager`` 自体が同一 (day, turn, idx) を append-only に弾くので,
+        多重投入しても安全.
+        """
+        if self.thread_manager is None:
+            return
+        for talk in talks:
+            try:
+                self.thread_manager.on_new_talk(talk)
+            except Exception:
+                self.agent_logger.logger.exception("ThreadManager.on_new_talk failed")
 
     def get_alive_agents(self) -> list[str]:
         """Get the list of alive agents.
@@ -532,13 +638,19 @@ class Agent:
         _, profile_encoding = load_profile_data(lang)
         return local_profile, profile_encoding
 
-    def _send_message_to_llm(self, request: Request | None) -> str | None:
+    def _send_message_to_llm(
+        self,
+        request: Request | None,
+        extra_context: dict[str, Any] | None = None,
+    ) -> str | None:
         """Send message to LLM and get response.
 
         LLMにメッセージを送信して応答を取得する.
 
         Args:
             request (Request | None): The request type to process / 処理するリクエストタイプ
+            extra_context (dict[str, Any] | None): Additional Jinja context (overrides defaults) /
+                追加 Jinja コンテキスト (既定値を上書きする). Step A 結果の注入に使う.
 
         Returns:
             str | None: LLM response or None if error occurred / LLMの応答またはエラー時はNone
@@ -567,6 +679,7 @@ class Agent:
         # rules.jinja がこの dict を参照して描画する. 未解決時は None で空出力.
         agent_count = self.setting.agent_count if self.setting is not None else None
         rules_data = resolve_rules(lang, day, agent_count)
+        thread_ctx = self._build_thread_context()
         key = {
             "info": self.info,
             "setting": self.setting,
@@ -583,7 +696,10 @@ class Agent:
             "profile_encoding": profile_encoding,
             "daily_objective": daily_objective_text,
             "rules": rules_data,
+            **thread_ctx,
         }
+        if extra_context:
+            key.update(extra_context)
         env = _get_jinja_env(lang)
         template = env.from_string(prompt)
         prompt = template.render(**key).strip()
@@ -608,6 +724,143 @@ class Agent:
                 self.agent_logger.logger.exception("Failed to send message to LLM (%s)", label)
                 continue
         return last_response
+
+    def _invoke_thread_llm_for_decide(self, prompt: str) -> str | None:
+        """Stateless invoke of ``llm.thread`` for Step A and log it.
+
+        Step A 用の ``llm.thread`` ステートレス呼び出し. cost と agent_logger に記録する.
+        ラベルは ``THREAD_DECIDE`` で統一し, agent ログから grep しやすい形にする.
+        """
+        return self._invoke_thread_llm(prompt, label="THREAD_DECIDE", request_key="thread_decide")
+
+    def _invoke_thread_llm_for_assign(self, prompt: str) -> str | None:
+        """Stateless invoke of ``llm.thread`` for LLMThreadInference (P5).
+
+        LLMThreadInference (P5) 用の ``llm.thread`` ステートレス呼び出し.
+        ラベルは ``THREAD_INFER`` で統一し, agent ログから grep しやすい形にする.
+        """
+        return self._invoke_thread_llm(prompt, label="THREAD_INFER", request_key="thread_infer")
+
+    def _build_thread_assign_prompt(
+        self,
+        talk: Talk,
+        threads: list[Any],
+        _context: Any,  # noqa: ANN401
+    ) -> str:
+        """Render ``thread_assign.jinja`` for LLMThreadInference.
+
+        ``thread_assign.jinja`` を描画して LLMThreadInference に渡す.
+        ``threads`` は thread.models.Thread の list だが Jinja 渡しなので Any 型.
+        """
+        lang = str(self.config.get("lang", "jp"))
+        env = _get_jinja_env(lang)
+        template = env.get_template("thread_assign.jinja")
+        return template.render(
+            talk=talk,
+            threads=threads,
+            info=self.info,
+            headings=self.config.get("headings") or {},
+        ).strip()
+
+    def _invoke_thread_llm(
+        self,
+        prompt: str,
+        label: str,
+        request_key: str,
+    ) -> str | None:
+        """Generic stateless invocation of ``llm.thread`` (no message history).
+
+        ``llm.thread`` への一般的な stateless 呼び出し. cost / agent_logger に記録する.
+        """
+        if self.llm_model_thread is None or self.llm_meta_thread is None:
+            self.agent_logger.logger.warning("llm.thread is not initialized; skipping %s", label)
+            return None
+        try:
+            ai = self.llm_model_thread.invoke([HumanMessage(content=prompt)])
+            response = ai.content if isinstance(ai.content, str) else str(ai.content)
+            self._record_cost(ai, self.llm_meta_thread, request_key, label.lower())
+            self.agent_logger.logger.info(["LLM", label, prompt, response])
+        except Exception:
+            self.agent_logger.logger.exception("Failed to invoke llm.thread (%s)", label)
+            return None
+        return response
+
+    def _build_step_a_prompt(self) -> str:
+        """Render the Step A prompt using ``thread_decision.jinja``.
+
+        ``thread_decision.jinja`` で Step A プロンプトを描画する.
+        """
+        if self.thread_manager is None or self.info is None:
+            return ""
+        lang = str(self.config.get("lang", "jp"))
+        env = _get_jinja_env(lang)
+        threads = self.thread_manager.filtered_threads(
+            current_day=self.info.day,
+            history_days=self._thread_history_days(),
+        )
+        new_pairs = self.thread_manager.new_talks_since_last_read(self.talk_history)
+        ctx = {
+            "info": self.info,
+            "role": self.role,
+            "threads": threads,
+            "new_talks_with_threads": new_pairs,
+            "headings": self.config.get("headings") or {},
+        }
+        template = env.get_template("thread_decision.jinja")
+        return template.render(**ctx).strip()
+
+    def _run_step_a(self) -> StepADecision | None:
+        """Run Step A and return the parsed decision (None if disabled).
+
+        Step A を実行してパース済み判断を返す. スレッド機能や LLM 未準備なら None.
+        構造ログにも併せて記録する. プロンプト側の制約を LLM が破るケースに備えて
+        ``_clamp_decision`` で code-level safety net を適用する.
+        """
+        if (
+            not self._is_thread_enabled()
+            or self.thread_manager is None
+            or self._thread_decision is None
+        ):
+            return None
+        prompt = self._build_step_a_prompt()
+        if not prompt:
+            return None
+        decision = self._thread_decision.decide(prompt)
+        decision = self._clamp_decision(decision)
+        if self._thread_structure_logger is not None and self.info is not None:
+            try:
+                self._thread_structure_logger.log_decision(
+                    day=self.info.day,
+                    turn=0,  # turn は packet からは取れないので 0 固定 (talk() 単位記録)
+                    decision=decision.to_dict(),
+                    threads_snapshot=self.thread_manager.threads(),
+                )
+            except Exception:
+                self.agent_logger.logger.exception("Failed to log Step A decision")
+        return decision
+
+    def _clamp_decision(self, decision: StepADecision) -> StepADecision:
+        """Hard-guard against known bad Step A outputs (code-level safety net).
+
+        プロンプト側の制約を LLM が破るケース向けの code-level safety net. 現状のルール:
+
+        * ``day == 1`` の ``over`` は禁止. ``skip`` にクランプして次ターン以降での
+          判断余地を残す (sent-level over のほうがダメージが大きいため).
+
+        今後必要になればここにルールを追加する.
+        """
+        day = self.info.day if self.info is not None else None
+        if decision.action == "over" and day is not None and day <= 1:
+            self.agent_logger.logger.warning(
+                "Step A returned 'over' on day %d; clamping to 'skip' (day1 over is forbidden)",
+                day,
+            )
+            return StepADecision(
+                target_thread=None,
+                action="skip",
+                reason=f"(code-clamp: day{day} over→skip) {decision.reason}",
+            )
+        return decision
 
     @timeout
     def name(self) -> str:
@@ -719,6 +972,85 @@ class Agent:
             raise ValueError(msg)
         return {k: role_cfg[k] for k in self._LLM_OVERRIDE_KEYS if k in role_cfg}
 
+    def _setup_thread_manager(self) -> None:
+        """Create ``ThreadManager`` and structure logger if the feature is enabled.
+
+        スレッド機能が有効な場合に ``ThreadManager`` と構造ログを生成・配線する.
+        無効時は何もしない. info / role 未確定時は警告を出して諦める (configミスの早期検出).
+        この関数は initialize 中に1回だけ呼ばれる.
+        既に initialize 前に積まれた talk_history がある場合は逐次 feed する.
+        """
+        if not self._is_thread_enabled():
+            return
+        if self.info is None or self.role is None:
+            self.agent_logger.logger.warning(
+                "thread feature is enabled but info/role is not ready; skipping setup",
+            )
+            return
+
+        # 推定戦略: heuristic (決定論, LLM 不使用) または llm (llm.thread 経由).
+        # llm 戦略時は LLM 出力パース失敗で heuristic にフォールバック.
+        strategy_name = str(self._thread_config().get("inference", "heuristic")).lower()
+        inference: ThreadInference
+        if strategy_name == "llm":
+            inference = LLMThreadInference(
+                invoker=self._invoke_thread_llm_for_assign,
+                prompt_builder=self._build_thread_assign_prompt,
+            )
+        else:
+            if strategy_name != "heuristic":
+                self.agent_logger.logger.warning(
+                    "thread.inference=%s は未対応のため heuristic にフォールバックします",
+                    strategy_name,
+                )
+            inference = HeuristicThreadInference()
+
+        all_agents: set[str] = set(self.info.status_map.keys()) if self.info.status_map else set()
+        lang = str(self.config.get("lang", "jp"))
+        self.thread_manager = ThreadManager(
+            self_agent=self.info.agent or self.agent_name,
+            self_role=self.role,
+            all_agents=all_agents,
+            inference=inference,
+            lang=lang,
+        )
+
+        # 構造ログ: log.file_output が true のときのみ有効.
+        if bool(self.config.get("log", {}).get("file_output", False)):
+            try:
+                game_dir = resolve_game_log_dir(self.config, self._current_game_id())
+                struct_dir = game_dir / THREAD_STRUCTURE_SUBDIR
+                struct_path = struct_dir / f"{self.agent_name}.jsonl"
+                self._thread_structure_logger = StructureLogger(struct_path)
+                self.thread_manager.set_event_callback(self._thread_structure_logger)
+            except Exception:
+                self.agent_logger.logger.exception("Failed to set up thread structure logger")
+
+        # initialize より前に talk_history が蓄積されていた場合に備えて逐次反映する.
+        # (実運用では INITIALIZE 受信直後に呼ばれるので通常は空)
+        if self.talk_history:
+            self._feed_thread_manager(list(self.talk_history))
+
+    def _setup_thread_llm(self) -> None:
+        """Create the ``llm.thread`` model (always stateless) when feature is on.
+
+        スレッド機能が有効なときに ``llm.thread`` 用 LLM を生成する. 系統は常に
+        stateless (履歴なし) で動かすため, ``separate_langchain`` の値には依存しない.
+        ``llm.thread`` セクションが省略されている場合は ``llm.type`` をデフォルトとし,
+        provider セクションの設定をそのまま継承する.
+        """
+        if not self._is_thread_enabled():
+            return
+        llm_cfg = self.config.get("llm") or {}
+        thread_cfg = llm_cfg.get("thread") or {}
+        default_type = str(llm_cfg.get("type", ""))
+        thread_type = str(thread_cfg.get("type") or default_type)
+        overrides = self._extract_llm_overrides(thread_cfg, role_name="thread")
+        self.llm_model_thread, self.llm_meta_thread = self._create_llm_model(
+            thread_type, overrides,
+        )
+        self._thread_decision = ThreadDecision(invoker=self._invoke_thread_llm_for_decide)
+
     def initialize(self) -> None:
         """Perform initialization for game start request.
 
@@ -726,6 +1058,14 @@ class Agent:
         """
         if self.info is None:
             return
+
+        # スレッド系統の LLM を先に生成 (常に stateless). Step A 判断と LLM 推定で使う.
+        # ThreadManager より先にする理由: LLM 推定戦略を使うとき, ThreadManager の
+        # catch-up 処理 (累積 talk_history の事後フィード) で LLM 呼出が走るため.
+        self._setup_thread_llm()
+        # スレッド機能の初期化. info.role_map のキーから全エージェント名を集めて
+        # ThreadManager を生成し, 構造ログ出力先 (有効時のみ) を設定する.
+        self._setup_thread_manager()
 
         llm_cfg = self.config["llm"]
         default_type = str(llm_cfg.get("type", ""))
@@ -775,11 +1115,29 @@ class Agent:
 
         トークリクエストに対する応答を返す.
 
+        スレッド機能が有効な場合は Step A (判断) を先に実行する. 判断が ``skip`` /
+        ``over`` の場合は Step B (発話生成) をスキップして直接 ``"Skip"`` /
+        ``"Over"`` を返す. ``reply`` / ``new_thread`` の場合のみ判断結果を
+        ``thread_decision`` として Step B に注入する.
+
         Returns:
             str: Talk message / 発言メッセージ
         """
-        response = self._send_message_to_llm(Request.TALK)
+        decision = self._run_step_a()
+        if decision is not None and decision.action in ("skip", "over"):
+            shortcut = "Skip" if decision.action == "skip" else "Over"
+            self.sent_talk_count = len(self.talk_history)
+            if self.thread_manager is not None:
+                self.thread_manager.mark_read(len(self.talk_history))
+            return shortcut
+
+        extra_ctx: dict[str, Any] = {}
+        if decision is not None:
+            extra_ctx["thread_decision"] = decision.to_dict()
+        response = self._send_message_to_llm(Request.TALK, extra_context=extra_ctx)
         self.sent_talk_count = len(self.talk_history)
+        if self.thread_manager is not None:
+            self.thread_manager.mark_read(len(self.talk_history))
         return response or ""
 
     def daily_finish(self) -> None:
@@ -852,6 +1210,15 @@ class Agent:
             render_markdown(cost_dir)
         except Exception:
             self.agent_logger.logger.exception("Failed to render cost_summary.md")
+        # スレッド機能有効時は構造ログ JSONL を読んで Markdown サマリを生成する.
+        if self._is_thread_enabled():
+            try:
+                struct_dir = resolve_game_log_dir(self.config, game_id) / THREAD_STRUCTURE_SUBDIR
+                jsonl_path = struct_dir / f"{self.agent_name}.jsonl"
+                md_path = struct_dir / f"{self.agent_name}.md"
+                render_markdown_summary(jsonl_path, md_path)
+            except Exception:
+                self.agent_logger.logger.exception("Failed to render thread structure markdown")
 
     @timeout
     def action(self) -> str | None:  # noqa: C901, PLR0911

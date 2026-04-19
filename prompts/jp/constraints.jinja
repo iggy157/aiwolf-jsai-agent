@@ -40,6 +40,9 @@
 本日の残り発言可能文字数は {{ info.remain_length }} 文字です。
 {% endif -%}
 発言内容のみを出力してください。説明やメタ情報、前置きは含めないでください。
+スレッド参照タグ (例: [T3], [T1*], >>T2, <T1> など, スレッドIDを含む表記すべて) は発話本文に含めないでください。
+これらはプロンプト内部の整理用タグであり, 実際の発話には不要です。
+@AgentName 形式の @メンションは使って構いません。
 これ以上発言することがない場合は「Over」と出力してください。
 {% elif request_key == 'whisper' -%}
 {%- set ml = (setting.whisper.max_length if setting is not none and setting.whisper is not none and setting.whisper.max_length is not none else none) -%}
@@ -58,6 +61,8 @@
 本日の残り囁き可能文字数は {{ info.remain_length }} 文字です。
 {% endif -%}
 囁き内容のみを出力してください。説明やメタ情報、前置きは含めないでください。
+スレッド参照タグ (例: [T3], [T1*], >>T2, <T1> など, スレッドIDを含む表記すべて) は囁き本文に含めないでください。
+これらはプロンプト内部の整理用タグであり, 実際の囁きには不要です。
 これ以上囁くことがない場合は「Over」と出力してください。
 {% elif request_key in ['divine', 'guard', 'vote', 'attack'] -%}
 対象エージェント名のみを出力してください。説明・理由・記号・接頭辞は一切含めないでください。

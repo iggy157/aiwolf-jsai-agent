@@ -1,0 +1,67 @@
+{#-
+  thread_decision.jinja
+  Step A (発話前判断) のプロンプト. llm.thread 系統に stateless で投げる.
+  Expects:
+    - role: 自分の役職 (Role enum)
+    - info: ゲーム状況 (info.day / info.agent / info.remain_count など)
+    - threads: 全スレッド snapshot (ThreadManager.filtered_threads)
+    - new_talks_with_threads: 直近 mark_read 以降の (Talk, Thread) ペア
+  出力: 厳密な JSON (target_thread / action / reason).
+-#}
+あなたは {{ info.agent }} ({{ role.value if role is not none else 'unknown' }}) です。
+現在 {{ info.day }} 日目のトークフェーズで, 次の発話を生成する直前の判断を行います。
+{% if info.remain_count is not none -%}
+本日の残りトーク回数: {{ info.remain_count }}
+{% endif %}
+
+# 最優先の方針 (これを最初に考えてください)
+
+序盤 (特に day 1) や, スレッドが少ない / 新着発話がないとき は, 原則として
+"over" や "skip" ではなく **何かしら発言する方向** ("reply" または "new_thread")
+で判断してください. 発言ネタが具体的に思い浮かばなくても構いません. 実際の発話内容は
+次のステップ (Step B) で生成されるため, ここでは「話すか否か」「どの流れに乗るか」
+だけを決めれば十分です. 沈黙 (over / skip) を選ぶのは最終手段です.
+
+# スレッド一覧 (現在保持中のもの)
+{{ block('thread_summary') }}
+
+# 直前の自分の発言以降に追加された他者の発話
+{{ block('thread_diff') }}
+
+# 出力スキーマ (JSON 1 行のみ)
+- target_thread: 返信または継続するスレッドの ID (整数). 新規スレッドや skip / over の場合は null.
+- action: 次のいずれか
+  - "reply": 既存スレッドに返信する (通常はこれを選ぶ)
+  - "new_thread": 新しい話題でスレッドを立てる
+  - "skip": 今回のターンだけ発言を見送る
+  - "over": 今日のトークフェーズから抜ける (=今日はこれ以降一切発言しない)
+- reason: 1 文 (30 字以内目安) の短い理由
+
+# skip と over の違い (厳密)
+
+- **"skip"** は「**このターンの発話のみ**見送る」宣言です。
+  次のターンの talk リクエストでは再度 Step A の判断機会があり, そこで発言する余地があります。
+  使う場面の例: 直前に他者が自分への質問を被せてきて一度様子を見たい / 情報がまだ不足していて発言内容が定まらない.
+  skip は「保留」「パス」に近く, 積極的な議論参加を妨げません.
+
+- **"over"** は「**今日のトークフェーズを完全に抜ける**」宣言です。
+  一度 over を宣言するとこの日はもう発言できません. 他者の質問にも答えられません.
+  使う場面の例: 自分が伝えるべき情報 (役職 CO, 占い結果, 吊り先候補など) を全て共有し終え,
+              かつ他者との議論にも十分応答し終えた後.
+
+# 重要な判断指針 (over の誤用を防ぐ)
+
+- **day 1 やトークフェーズの序盤 (turn が若い) では "over" を選んではいけません**.
+  day 1 は自己紹介・役職 CO・初日占い結果の共有など情報交換が活発に必要なフェーズです.
+  早期に抜けると陣営を問わず不利になります.
+- **残りトーク回数 (remain_count) が 1 以上のとき, over は基本的に不適切**です.
+  サーバがまだ発言機会を与えている = 議論を求めている と解釈してください.
+- 迷ったら "over" ではなく "skip" を選んでください. skip は後で戻れますが over は戻れません.
+- 既存スレッドに自分宛 (自分宛=yes) や 役職関連 (役職関連=yes) があるなら優先的に "reply" を検討してください.
+- 既存どのスレッドも適切でなく新たな話題を切り出したいときに "new_thread" を選びます.
+
+JSON 以外の文字 (説明文・コードフェンス・前置き) は一切出力しないでください。
+
+例: {"target_thread": 2, "action": "reply", "reason": "Agent3 が私の役職を質問しているため返答が必要"}
+例: {"target_thread": null, "action": "new_thread", "reason": "新しい話題として情報を共有したい"}
+例: {"target_thread": null, "action": "skip", "reason": "発言内容を整理中のため一旦保留"}

@@ -1,0 +1,26 @@
+{#-
+  thread_history.jinja
+  全スレッドのトーク内容を, スレッド単位でグループ化して表示する.
+  single-turn モード用 (multi-turn は thread_diff.jinja を使う).
+  Expects:
+    - threads: list[Thread] (ThreadManager.filtered_threads の戻り値)
+    - talk_history: list[Talk] (Agent.talk_history)
+  各スレッド見出しの下に, talk_keys 順に "agent: text" を出力する.
+-#}
+{%- if not threads -%}
+(まだ発話履歴はありません)
+{%- else -%}
+{%- set lookup = {} -%}
+{%- for t in talk_history -%}
+{%- set _ = lookup.update({ (t.day, t.turn, t.idx): t }) -%}
+{%- endfor -%}
+{%- for thr in threads -%}
+{%- set tag = '[T' ~ thr.id ~ ('*' if thr.is_broadcast else '') ~ ']' -%}
+{{ tag }} "{{ thr.title }}"
+{% for key in thr.talk_keys -%}
+{%- set tk = lookup.get(key) -%}
+{%- if tk %}  {{ tk.agent }}: {{ tk.text }}
+{% endif -%}
+{%- endfor %}
+{% endfor -%}
+{%- endif -%}

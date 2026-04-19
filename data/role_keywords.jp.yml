@@ -1,0 +1,49 @@
+# 役職別関連キーワード辞書 (日本語).
+# HeuristicThreadInference / ThreadManager が talk.text に対して substring match を行い,
+# 自分の役職に関連する話題かどうか (Thread.role_relevant フラグ) を判定する.
+# キーワードは Anti-pattern (誤検出) を避けるため過剰に増やさず, 役職特有の語彙に絞る.
+
+WEREWOLF:
+  - 人狼
+  - 狼
+  - 噛む
+  - 噛み
+  - 襲撃
+  - 黒先
+  - 吊り
+  - 偽占い
+
+POSSESSED:
+  - 狂人
+  - 狂信者
+  - 偽占い
+  - 騙り
+
+SEER:
+  - 占い
+  - 占い師
+  - 占い結果
+  - 占って
+  - 占う
+  - 占った
+  - 黒判定
+  - 白判定
+
+MEDIUM:
+  - 霊媒
+  - 霊媒師
+  - 霊能
+  - 死体
+  - 黒判定
+  - 白判定
+
+BODYGUARD:
+  - 護衛
+  - 守る
+  - 騎士
+  - 護衛先
+
+VILLAGER:
+  - 村人
+  - 投票
+  - 吊り

@@ -11,3 +11,9 @@ constraints: 出力制約
 daily_objective: 本日の目標
 game_state: ゲーム状況
 rules: ルール
+thread_summary: スレッド一覧
+thread_history: スレッド別履歴
+thread_diff: 新着発話 (前回送信以降)
+thread_decision: 判断指示 (Step A)
+thread_context: 判断結果
+thread_assign: スレッド割当推定

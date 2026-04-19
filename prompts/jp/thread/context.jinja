@@ -9,10 +9,10 @@
 {%- if thread_decision is defined and thread_decision -%}
 {%- set act = thread_decision.action -%}
 {%- if act == 'reply' and thread_decision.target_thread is not none -%}
-方針: スレッド [T{{ thread_decision.target_thread }}] に返信する形で発話してください。
+方針: スレッド [T{{ thread_decision.target_thread }}] の流れに沿った発話をしてください。
 {% if thread_decision.reason -%}理由: {{ thread_decision.reason }}{%- endif %}
 {%- elif act == 'new_thread' -%}
-方針: 新しいスレッドを立てる形で発話してください。
+方針: 新しい話題として発話してください。
 {% if thread_decision.reason -%}理由: {{ thread_decision.reason }}{%- endif %}
 {%- endif -%}
 {%- endif -%}

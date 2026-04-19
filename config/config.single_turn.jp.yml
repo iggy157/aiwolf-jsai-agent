@@ -18,8 +18,8 @@ llm:
   # 同じ会社の異なるモデルを使い分けたい場合はここに model を書く (例: gpt-4o と gpt-4o-mini).
   # type を省略した場合は llm.type をデフォルトとして使う.
   talk:
-    type: openai
-    model: gpt-4o
+    type: anthropic
+    model: claude-sonnet-4-6
   action:
     type: openai
     model: gpt-5.2

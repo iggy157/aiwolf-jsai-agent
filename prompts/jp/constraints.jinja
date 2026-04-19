@@ -28,12 +28,12 @@
 {% if ml is not none and ml.per_talk is not none -%}
 1発言あたり最大 {{ ml.per_talk }} 文字以内で出力してください。
 {% if ml.mention_length is not none and ml.mention_length > 0 -%}
-ただし他エージェントへの @メンション (例: {{ mention_hint }}) を含む場合に限り, さらに {{ ml.mention_length }} 文字まで延長できます。
+発話中に他エージェントの @メンション (例: 文中の {{ mention_hint }}) が自然に含まれる場合は, さらに {{ ml.mention_length }} 文字まで延長されます。ただし文字数を伸ばすために不要な @ を入れる必要はありません。
 {% endif -%}
 {% elif ml is not none and ml.base_length is not none -%}
 1発言あたり {{ ml.base_length }} 文字以内で出力してください。
 {% if ml.mention_length is not none and ml.mention_length > 0 -%}
-ただし他エージェントへの @メンション (例: {{ mention_hint }}) を含める場合に限り, 追加で {{ ml.mention_length }} 文字まで書けます (合計最大 {{ ml.base_length + ml.mention_length }} 文字)。
+発話中に他エージェントの @メンション (例: 文中の {{ mention_hint }}) が自然に含まれる場合は, 追加で {{ ml.mention_length }} 文字まで書けます (合計最大 {{ ml.base_length + ml.mention_length }} 文字)。ただし文字数を伸ばすために不要な @ を入れる必要はありません。
 {% endif -%}
 {% endif -%}
 {% if info is not none and info.remain_length is not none -%}
@@ -49,12 +49,12 @@
 {% if ml is not none and ml.per_talk is not none -%}
 1囁きあたり最大 {{ ml.per_talk }} 文字以内で出力してください。
 {% if ml.mention_length is not none and ml.mention_length > 0 -%}
-ただし他エージェントへの @メンション (例: {{ mention_hint }}) を含む場合に限り, さらに {{ ml.mention_length }} 文字まで延長できます。
+囁きの中に他エージェントの @メンション (例: 文中の {{ mention_hint }}) が自然に含まれる場合は, さらに {{ ml.mention_length }} 文字まで延長されます。ただし文字数を伸ばすために不要な @ を入れる必要はありません。
 {% endif -%}
 {% elif ml is not none and ml.base_length is not none -%}
 1囁きあたり {{ ml.base_length }} 文字以内で出力してください。
 {% if ml.mention_length is not none and ml.mention_length > 0 -%}
-ただし他エージェントへの @メンション (例: {{ mention_hint }}) を含める場合に限り, 追加で {{ ml.mention_length }} 文字まで書けます (合計最大 {{ ml.base_length + ml.mention_length }} 文字)。
+囁きの中に他エージェントの @メンション (例: 文中の {{ mention_hint }}) が自然に含まれる場合は, 追加で {{ ml.mention_length }} 文字まで書けます (合計最大 {{ ml.base_length + ml.mention_length }} 文字)。ただし文字数を伸ばすために不要な @ を入れる必要はありません。
 {% endif -%}
 {% endif -%}
 {% if info is not none and info.remain_length is not none -%}

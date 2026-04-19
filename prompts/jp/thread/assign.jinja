@@ -1,5 +1,5 @@
 {#-
-  thread_assign.jinja
+  thread/assign.jinja
   LLMThreadInference 用のプロンプト. 1 件の新着 talk が, 既存スレッド一覧の
   どれに属するか / 新規スレッドを立てるか を JSON で答えさせる.
   Expects:
@@ -16,7 +16,7 @@
 - text: {{ talk.text }}
 
 # 現在のスレッド一覧
-{{ block('thread_summary') }}
+{{ block('thread/summary') }}
 
 # 出力
 - 既存スレッドへ追加: {"action": "existing", "thread_id": <既存ID>, "reason": "<短い理由>"}

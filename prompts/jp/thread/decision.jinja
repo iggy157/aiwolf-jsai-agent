@@ -1,5 +1,5 @@
 {#-
-  thread_decision.jinja
+  thread/decision.jinja
   Step A (発話前判断) のプロンプト. llm.thread 系統に stateless で投げる.
   Expects:
     - role: 自分の役職 (Role enum)
@@ -23,10 +23,10 @@
 だけを決めれば十分です. 沈黙 (over / skip) を選ぶのは最終手段です.
 
 # スレッド一覧 (現在保持中のもの)
-{{ block('thread_summary') }}
+{{ block('thread/summary') }}
 
 # 直前の自分の発言以降に追加された他者の発話
-{{ block('thread_diff') }}
+{{ block('thread/diff') }}
 
 # 出力スキーマ (JSON 1 行のみ)
 - target_thread: 返信または継続するスレッドの ID (整数). 新規スレッドや skip / over の場合は null.

@@ -73,18 +73,39 @@ _HEADING_STYLES: dict[str, tuple[str, str, bool]] = {
 }
 
 
-def _load_labels(blocks_dir: Path) -> dict[str, str]:
+def _load_labels(blocks_dir: Path) -> dict[str, Any]:
     """Load heading label dictionary from prompts/<lang>/_labels.yml.
 
     prompts/<lang>/_labels.yml から見出しラベル辞書を読み込む.
     ファイルが無い場合は空辞書を返し, `block()` は name そのものをフォールバックとして使う.
+    サブディレクトリ配下のブロックはネストした dict (例: ``thread: { summary: ... }``) で
+    書ける. ``_resolve_label`` でスラッシュパスから辿る.
     """
     labels_path = blocks_dir / "_labels.yml"
     if not labels_path.exists():
         return {}
     with labels_path.open(encoding="utf-8") as f:
         raw = yaml.safe_load(f) or {}
-    return {str(k): str(v) for k, v in raw.items()}
+    if not isinstance(raw, dict):
+        return {}
+    return raw  # type: ignore[no-any-return]
+
+
+def _resolve_label(labels: dict[str, Any], name: str) -> str:
+    """Resolve heading label for ``name`` (supports ``a/b/c`` nested lookup).
+
+    ``name`` から見出しラベルを解決する. ``a/b/c`` のようなスラッシュ区切りは
+    ネストした dict を辿る (``labels['a']['b']['c']``). 解決できない場合は最後の
+    パス成分をフォールバックとして返す (= 旧挙動と互換).
+    """
+    parts = name.split("/")
+    node: Any = labels
+    for part in parts:
+        if isinstance(node, dict) and part in node:
+            node = node[part]
+        else:
+            return parts[-1]
+    return str(node) if isinstance(node, str) else parts[-1]
 
 
 def _get_jinja_env(lang: str) -> Environment:
@@ -125,7 +146,7 @@ def _get_jinja_env(lang: str) -> Environment:
             prefix, suffix, has_close = _HEADING_STYLES.get(
                 style, _HEADING_STYLES["markdown"],
             )
-            label = labels.get(name, name)
+            label = _resolve_label(labels, name)
             head = f"{prefix}{label}{suffix}"
             if has_close:
                 return f"{head}\n{body}\n</{label}>"
@@ -747,14 +768,14 @@ class Agent:
         threads: list[Any],
         _context: Any,  # noqa: ANN401
     ) -> str:
-        """Render ``thread_assign.jinja`` for LLMThreadInference.
+        """Render ``thread/assign.jinja`` for LLMThreadInference.
 
-        ``thread_assign.jinja`` を描画して LLMThreadInference に渡す.
+        ``thread/assign.jinja`` を描画して LLMThreadInference に渡す.
         ``threads`` は thread.models.Thread の list だが Jinja 渡しなので Any 型.
         """
         lang = str(self.config.get("lang", "jp"))
         env = _get_jinja_env(lang)
-        template = env.get_template("thread_assign.jinja")
+        template = env.get_template("thread/assign.jinja")
         return template.render(
             talk=talk,
             threads=threads,
@@ -786,9 +807,9 @@ class Agent:
         return response
 
     def _build_step_a_prompt(self) -> str:
-        """Render the Step A prompt using ``thread_decision.jinja``.
+        """Render the Step A prompt using ``thread/decision.jinja``.
 
-        ``thread_decision.jinja`` で Step A プロンプトを描画する.
+        ``thread/decision.jinja`` で Step A プロンプトを描画する.
         """
         if self.thread_manager is None or self.info is None:
             return ""
@@ -806,7 +827,7 @@ class Agent:
             "new_talks_with_threads": new_pairs,
             "headings": self.config.get("headings") or {},
         }
-        template = env.get_template("thread_decision.jinja")
+        template = env.get_template("thread/decision.jinja")
         return template.render(**ctx).strip()
 
     def _run_step_a(self) -> StepADecision | None:

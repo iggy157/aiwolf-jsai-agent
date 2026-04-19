@@ -79,9 +79,9 @@ prompt:
 
     # トーク履歴
     {% if thread_enabled -%}
-    {{ block('thread_summary') }}
-    {{ block('thread_history') }}
-    {{ block('thread_context') }}
+    {{ block('thread/summary') }}
+    {{ block('thread/history') }}
+    {{ block('thread/context') }}
     {%- else -%}
     {% set history_source = talk_history -%}
     {% set history_start = 0 -%}

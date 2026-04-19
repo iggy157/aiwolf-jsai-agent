@@ -88,9 +88,9 @@ prompt:
   talk: |-
     {{ block('game_state') }}
     {% if thread_enabled -%}
-    {{ block('thread_summary') }}
-    {{ block('thread_diff') }}
-    {{ block('thread_context') }}
+    {{ block('thread/summary') }}
+    {{ block('thread/diff') }}
+    {{ block('thread/context') }}
     {%- else -%}
     {% set history_source = talk_history -%}
     {% set history_start = sent_talk_count -%}

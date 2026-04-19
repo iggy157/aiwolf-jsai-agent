@@ -1,9 +1,11 @@
 {#-
   thread/summary.jinja
-  全スレッドの見出し一覧 (1 行 / スレッド) を表示する.
+  全スレッドの見出し一覧をメトリクス付きで表示する (2 行 / スレッド).
   Expects:
     - threads: list[Thread] (ThreadManager.filtered_threads の戻り値)
-  各行: [T<id>] "<title>" 参加:<agents> 自分宛:yes/no 役職関連:yes/-
+  各 thread について:
+    1 行目: [T<id>] "<title>" 参加:<agents> 自分宛:yes/no 役職関連:yes/- day<d>/turn<t>
+    2 行目: 直近turn応答:<N>名 / 自分の発言:<M>回 (pile-on / 自己過多を把握する指標)
   broadcast スレッドは [T<id>*] のように * を付ける.
 -#}
 {%- if not threads -%}
@@ -15,5 +17,6 @@
 {%- set self_flag = 'yes' if t.mentions_self else 'no' -%}
 {%- set role_flag = 'yes' if t.role_relevant else '-' -%}
 {{ tag }} "{{ t.title }}" 参加:{{ parts }} 自分宛:{{ self_flag }} 役職関連:{{ role_flag }} day{{ t.last_active_day }}/turn{{ t.last_active_turn }}
+  直近turn応答:{{ t.saturation_last_turn }}名 / 自分の発言:{{ t.self_utterance_count }}回
 {% endfor -%}
 {%- endif -%}

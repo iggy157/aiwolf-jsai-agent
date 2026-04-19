@@ -56,6 +56,12 @@ class Thread:
     created_turn: int = 0
     last_active_day: int = 0
     last_active_turn: int = 0
+    # 自分 (self_agent) がこのスレッドで発言した回数. on_new_talk で集計.
+    self_utterance_count: int = 0
+    # 直近の active turn (last_active_turn) において, このスレッドに応答した
+    # 個別エージェント数 (自分含む). pile-on 検知の客観指標. ThreadManager が
+    # 外向けに Thread を返すタイミングで計算して埋める (prompt 描画用).
+    saturation_last_turn: int = 0
 
 
 @dataclass(frozen=True)

@@ -825,10 +825,34 @@ class Agent:
             "role": self.role,
             "threads": threads,
             "new_talks_with_threads": new_pairs,
+            "recent_self_talks": self._recent_self_talks(),
             "headings": self.config.get("headings") or {},
         }
         template = env.get_template("thread/decision.jinja")
         return template.render(**ctx).strip()
+
+    def _recent_self_talks(self, days: int = 2) -> list[Talk]:
+        """Return self agent's talks from the recent ``days`` days.
+
+        直近 ``days`` 日分の自分自身の発話を返す. Step A で重複判定の材料にする
+        (「自分が既に同じことを言っていないか」を LLM が確認できるように).
+        ``talk.over`` の発話は除外 (内容を持たないため).
+
+        Args:
+            days (int): Number of recent days to include / 直近何日分を含めるか
+
+        Returns:
+            list[Talk]: Recent self talks in chronological order / 時系列順の自分の発話
+        """
+        if self.info is None or not self.talk_history:
+            return []
+        self_name = self.info.agent or self.agent_name
+        cutoff_day = max(0, self.info.day - days + 1)
+        return [
+            t
+            for t in self.talk_history
+            if t.agent == self_name and t.day >= cutoff_day and not t.over
+        ]
 
     def _run_step_a(self) -> StepADecision | None:
         """Run Step A and return the parsed decision (None if disabled).

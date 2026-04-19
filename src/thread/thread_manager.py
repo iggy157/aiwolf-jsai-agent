@@ -70,6 +70,9 @@ class ThreadManager:
         self._threads: list[Thread] = []
         # (day, turn, idx) -> thread_id. 1 talk は1スレッドに紐付き append-only.
         self._talk_to_thread: dict[tuple[int, int, int], int] = {}
+        # (day, turn, idx) -> agent. Thread.saturation_last_turn 計算用にキーから
+        # 話者を逆引きするためのマップ. on_new_talk 時に populate.
+        self._talk_to_agent: dict[tuple[int, int, int], str] = {}
         # multi-turn の差分送信用. talk_history のうちこの位置以降が「未読」.
         self._read_cursor = 0
         # 新規スレッド ID 採番. 1 始まり.
@@ -141,6 +144,7 @@ class ThreadManager:
 
         self._update_thread(thread, talk)
         self._talk_to_thread[key] = thread.id
+        self._talk_to_agent[key] = talk.agent
 
         if self._on_event is not None:
             self._on_event.on_assignment(talk, thread, assignment)
@@ -267,12 +271,14 @@ class ThreadManager:
         """Apply the new talk's effects to ``thread`` in place.
 
         新着 talk の影響を ``thread`` に反映する (append-only). 参加者・最終
-        アクティブ・役職関連 / 自分宛フラグを更新する.
+        アクティブ・役職関連 / 自分宛フラグ・自分の発言回数 を更新する.
         """
         thread.participants.add(talk.agent)
         thread.talk_keys.append((talk.day, talk.turn, talk.idx))
         thread.last_active_day = talk.day
         thread.last_active_turn = talk.turn
+        if talk.agent == self._self_agent:
+            thread.self_utterance_count += 1
         if not thread.role_relevant and self._is_role_relevant(talk.text):
             thread.role_relevant = True
         if not thread.mentions_self and (
@@ -281,6 +287,30 @@ class ThreadManager:
             or thread.is_broadcast
         ):
             thread.mentions_self = True
+
+    def _saturation_in_last_turn(self, thread: Thread) -> int:
+        """Return distinct agents who replied in this thread's ``last_active_turn``.
+
+        このスレッドの直近 active turn に応答したエージェント数 (自分含む) を返す.
+        pile-on (過集中) 検知の客観指標として prompt に表示する用途.
+
+        Args:
+            thread (Thread): 対象スレッド (内部 Thread オブジェクト)
+
+        Returns:
+            int: 直近 turn の応答エージェント数
+        """
+        target_day = thread.last_active_day
+        target_turn = thread.last_active_turn
+        agents: set[str] = set()
+        for key in thread.talk_keys:
+            day, turn, _ = key
+            if day != target_day or turn != target_turn:
+                continue
+            speaker = self._talk_to_agent.get(key)
+            if speaker:
+                agents.add(speaker)
+        return len(agents)
 
     def _is_role_relevant(self, text: str) -> bool:
         """Return True if ``text`` contains any role-relevant keyword.
@@ -302,11 +332,11 @@ class ThreadManager:
         msg = f"thread_id={thread_id} not found"
         raise KeyError(msg)
 
-    @staticmethod
-    def _copy_thread(thread: Thread) -> Thread:
+    def _copy_thread(self, thread: Thread) -> Thread:
         """Return a defensive copy of ``thread`` so callers cannot mutate state.
 
-        外部に渡す用の Thread 防御的コピーを返す.
+        外部に渡す用の Thread 防御的コピーを返す. ``saturation_last_turn`` は
+        この時点で計算して埋める (prompt 描画でそのまま使えるように).
         """
         return Thread(
             id=thread.id,
@@ -320,6 +350,8 @@ class ThreadManager:
             created_turn=thread.created_turn,
             last_active_day=thread.last_active_day,
             last_active_turn=thread.last_active_turn,
+            self_utterance_count=thread.self_utterance_count,
+            saturation_last_turn=self._saturation_in_last_turn(thread),
         )
 
 

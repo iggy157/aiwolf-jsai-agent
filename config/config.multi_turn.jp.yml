@@ -20,8 +20,8 @@ llm:
   # これにより "同じ会社の違うモデル" (openai + gpt-5 / openai + gpt-4o-mini など) を
   # talk と action に別々に当てられる. type を省略すると llm.type をデフォルトとして使う.
   talk:
-    type: anthropic
-    model: claude-opus-4-5
+    type: openai
+    model: gpt-4o
   action:
     type: openai
     model: gpt-5.2

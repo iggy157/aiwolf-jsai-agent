@@ -40,11 +40,11 @@ from thread import (
     render_markdown_summary,
 )
 from utils.agent_logger import AgentLogger
-from utils.cost_logger import append_cost_record, render_markdown, resolve_game_log_dir
-from utils.cost_utils import CostRecord, PricingRow, build_record, load_pricing_table
-from utils.daily_objective import resolve_objective
-from utils.profile import load_profile_data, resolve_profile
-from utils.rules import resolve_rules
+from utils.cost.logger import append_cost_record, render_markdown, resolve_game_log_dir
+from utils.cost.utils import CostRecord, PricingRow, build_record, load_pricing_table
+from utils.resolvers.daily_objective import resolve_objective
+from utils.resolvers.profile import load_profile_data, resolve_profile
+from utils.resolvers.rules import resolve_rules
 from utils.stoppable_thread import StoppableThread
 
 if TYPE_CHECKING:

@@ -1,6 +1,6 @@
-"""Load and resolve per-role per-day objectives from data/daily_objectives.<lang>.yml.
+"""Load and resolve per-role per-day objectives from data/prompts/daily_objectives.<lang>.yml.
 
-data/daily_objectives.<lang>.yml から役職別・日別の目標を読み込み, 役職と日数で解決する.
+data/prompts/daily_objectives.<lang>.yml から役職別・日別の目標を読み込み, 役職と日数で解決する.
 
 各役職は day_0 / day_1 / day_2 / default の4区分を持つ. 与えられた day が
 day_0-2 に該当すればその値, それ以外 (3日目以降) は default を返す.
@@ -12,7 +12,7 @@ from pathlib import Path
 
 import yaml
 
-_DATA_ROOT = Path(__file__).parent.joinpath("./../../data").resolve()
+_DATA_ROOT = Path(__file__).parent.joinpath("./../../../data/prompts").resolve()
 
 # lang 単位でキャッシュ. 値は role -> (day_key -> 目標文字列) のネスト辞書.
 _OBJECTIVES_CACHE: dict[str, dict[str, dict[str, str]]] = {}

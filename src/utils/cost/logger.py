@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Any
 from ulid import ULID
 
 if TYPE_CHECKING:
-    from utils.cost_utils import CostRecord
+    from utils.cost.utils import CostRecord
 
 logger = logging.getLogger(__name__)
 

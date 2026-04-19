@@ -2,9 +2,10 @@
 
 ``HeuristicThreadInference`` が使う broadcast / role キーワード辞書のローダー.
 
-辞書ファイルは ``data/broadcast_keywords.<lang>.yml`` と ``data/role_keywords.<lang>.yml``
-に置く. ファイルが存在しないか壊れているときは空タプルを返し, 推定は keyword 不発の
-扱いになる (= broadcast / 役職関連と判定されない).
+辞書ファイルは ``data/thread/broadcast_keywords.<lang>.yml`` と
+``data/thread/role_keywords.<lang>.yml`` に置く. ファイルが存在しないか壊れている
+ときは空タプルを返し, 推定は keyword 不発の扱いになる (= broadcast / 役職関連と
+判定されない).
 """
 
 from __future__ import annotations
@@ -17,7 +18,7 @@ import yaml
 if TYPE_CHECKING:
     from aiwolf_nlp_common.packet import Role
 
-_DATA_ROOT = Path(__file__).parent.joinpath("./../../data").resolve()
+_DATA_ROOT = Path(__file__).parent.joinpath("./../../data/thread").resolve()
 _BROADCAST_CACHE: dict[str, tuple[str, ...]] = {}
 _ROLE_CACHE: dict[str, dict[str, tuple[str, ...]]] = {}
 

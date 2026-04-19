@@ -1,6 +1,6 @@
-"""Load and resolve game rules from data/rules.<lang>.yml.
+"""Load and resolve game rules from data/prompts/rules.<lang>.yml.
 
-data/rules.<lang>.yml から日別フェーズ進行ルールと人数別役職編成を読み込み,
+data/prompts/rules.<lang>.yml から日別フェーズ進行ルールと人数別役職編成を読み込み,
 day と agent_count で rules.jinja 用に解決する.
 """
 
@@ -11,7 +11,7 @@ from typing import Any
 
 import yaml
 
-_DATA_ROOT = Path(__file__).parent.joinpath("./../../data").resolve()
+_DATA_ROOT = Path(__file__).parent.joinpath("./../../../data/prompts").resolve()
 
 # lang 単位でキャッシュ. 値は YAML 全体の dict (daily / compositions / role_labels).
 _RULES_CACHE: dict[str, dict[str, Any]] = {}

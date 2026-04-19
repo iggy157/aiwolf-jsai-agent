@@ -1,6 +1,6 @@
-"""Load and resolve character profiles from data/profiles.<lang>.yml.
+"""Load and resolve character profiles from data/prompts/profiles.<lang>.yml.
 
-data/profiles.<lang>.yml からキャラクタープロフィールを読み込み, エージェント名で解決する.
+data/prompts/profiles.<lang>.yml からキャラクタープロフィールを読み込み, エージェント名で解決する.
 
 サーバが custom_profile 有効で稼働しているとき, パケットの info.agent には
 キャラクター名 (例: "ミナト" / "Minato") がそのまま入る. この名前をキーに
@@ -14,7 +14,7 @@ from typing import Any
 
 import yaml
 
-_DATA_ROOT = Path(__file__).parent.joinpath("./../../data").resolve()
+_DATA_ROOT = Path(__file__).parent.joinpath("./../../../data/prompts").resolve()
 
 # lang 単位でキャッシュ. 値は (name -> profile dict, profile_encoding dict) のタプル.
 _PROFILE_CACHE: dict[str, tuple[dict[str, dict[str, Any]], dict[str, str]]] = {}

@@ -40,7 +40,7 @@ web_socket:
   auto_reconnect: false
 
 agent:
-  num: 5
+  num: 9
   team: kanolab
   kill_on_timeout: true
 

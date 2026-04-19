@@ -7,12 +7,12 @@
 # 埋め込む実装) を追加する. 現時点では骨格のみ.
 
 llm:
-  type: google
+  type: openai
   # llm 直下でも model / temperature / pricing_mode / base_url を書けば
   # 下のプロバイダセクション (openai:, google: 等) の値を上書きする.
   # model: gemini-2.5-pro
-  sleep_time: 3
-  separate_langchain: false
+  sleep_time: 0
+  separate_langchain: true
   # talk / action には type の他に model / temperature / pricing_mode / base_url を直接書ける.
   # 指定した項目は下の <provider>: セクションより優先される. 省略した項目は <provider>: から継承.
   # 同じ会社の異なるモデルを使い分けたい場合はここに model を書く (例: gpt-4o と gpt-4o-mini).
@@ -22,14 +22,14 @@ llm:
     model: gpt-4o
   action:
     type: openai
-    model: gpt-4o-mini
+    model: gpt-5.2
   # llm.thread: スレッド機能 (Step A 判断 + inference=llm 時の thread 割当) で使う第3系統.
   # 常に stateless (履歴なし) で動作し, separate_langchain の値には依存しない.
   # 軽量モデルを当てるとコスト・レイテンシを抑えられる.
   # thread.enabled=false のときは読まれない. type を省略すると llm.type をデフォルトとして使う.
   thread:
-    type: anthropic
-    model: claude-haiku-4-5-20251001
+    type: openai
+    model: gpt-5.2
 
 openai:
   model: gpt-4o-mini
@@ -59,8 +59,8 @@ anthropic:
 # 構造ログ (log/<game>/thread_structure/<agent>.jsonl) は log.file_output と
 # thread.enabled の両方が true のときに自動出力される.
 thread:
-  enabled: false
-  inference: heuristic
+  enabled: true
+  inference: llm
   history_days: null
 
 # single-turn モードでは llm_message_history を使わず, 毎リクエストでフルコンテキストを
@@ -73,11 +73,7 @@ prompt:
     {{ block('identity') }}
     {{ block('game_state') }}
     {{ block('rules') }}
-
-    # 日次イベント
     {{ block('event') }}
-
-    # トーク履歴
     {% if thread_enabled -%}
     {{ block('thread/summary') }}
     {{ block('thread/history') }}
@@ -87,7 +83,6 @@ prompt:
     {% set history_start = 0 -%}
     {{ block('history') }}
     {%- endif %}
-
     {{ block('daily_objective') }}
     {{ block('instruction') }}
     {{ block('constraints') }}
@@ -95,28 +90,23 @@ prompt:
     {{ block('identity') }}
     {{ block('game_state') }}
     {{ block('rules') }}
-
-    # 日次イベント
     {{ block('event') }}
-
-    # 囁き履歴
     {% set history_source = whisper_history -%}
     {% set history_start = 0 -%}
     {{ block('history') }}
-
     {{ block('instruction') }}
     {{ block('constraints') }}
   divine: |-
     {{ block('identity') }}
-
-    # 日次イベント
     {{ block('event') }}
-
-    # トーク履歴
+    {% if thread_enabled -%}
+    {{ block('thread/summary') }}
+    {{ block('thread/history') }}
+    {%- else -%}
     {% set history_source = talk_history -%}
     {% set history_start = 0 -%}
     {{ block('history') }}
-
+    {%- endif %}
     {{ block('instruction') }}
     対象:
     {% for k, v in info.status_map.items() -%}
@@ -126,15 +116,15 @@ prompt:
     {{ block('constraints') }}
   guard: |-
     {{ block('identity') }}
-
-    # 日次イベント
     {{ block('event') }}
-
-    # トーク履歴
+    {% if thread_enabled -%}
+    {{ block('thread/summary') }}
+    {{ block('thread/history') }}
+    {%- else -%}
     {% set history_source = talk_history -%}
     {% set history_start = 0 -%}
     {{ block('history') }}
-
+    {%- endif %}
     {{ block('instruction') }}
     対象:
     {% for k, v in info.status_map.items() -%}
@@ -144,15 +134,15 @@ prompt:
     {{ block('constraints') }}
   vote: |-
     {{ block('identity') }}
-
-    # 日次イベント
     {{ block('event') }}
-
-    # トーク履歴
+    {% if thread_enabled -%}
+    {{ block('thread/summary') }}
+    {{ block('thread/history') }}
+    {%- else -%}
     {% set history_source = talk_history -%}
     {% set history_start = 0 -%}
     {{ block('history') }}
-
+    {%- endif %}
     {{ block('instruction') }}
     対象:
     {% for k, v in info.status_map.items() -%}
@@ -162,15 +152,10 @@ prompt:
     {{ block('constraints') }}
   attack: |-
     {{ block('identity') }}
-
-    # 日次イベント
     {{ block('event') }}
-
-    # 囁き履歴
     {% set history_source = whisper_history -%}
     {% set history_start = 0 -%}
     {{ block('history') }}
-
     {{ block('instruction') }}
     対象:
     {% for k, v in info.status_map.items() -%}

@@ -73,11 +73,7 @@ prompt:
     {{ block('identity') }}
     {{ block('game_state') }}
     {{ block('rules') }}
-
-    # 日次イベント
     {{ block('event') }}
-
-    # トーク履歴
     {% if thread_enabled -%}
     {{ block('thread/summary') }}
     {{ block('thread/history') }}
@@ -87,7 +83,6 @@ prompt:
     {% set history_start = 0 -%}
     {{ block('history') }}
     {%- endif %}
-
     {{ block('daily_objective') }}
     {{ block('instruction') }}
     {{ block('constraints') }}
@@ -95,28 +90,23 @@ prompt:
     {{ block('identity') }}
     {{ block('game_state') }}
     {{ block('rules') }}
-
-    # 日次イベント
     {{ block('event') }}
-
-    # 囁き履歴
     {% set history_source = whisper_history -%}
     {% set history_start = 0 -%}
     {{ block('history') }}
-
     {{ block('instruction') }}
     {{ block('constraints') }}
   divine: |-
     {{ block('identity') }}
-
-    # 日次イベント
     {{ block('event') }}
-
-    # トーク履歴
+    {% if thread_enabled -%}
+    {{ block('thread/summary') }}
+    {{ block('thread/history') }}
+    {%- else -%}
     {% set history_source = talk_history -%}
     {% set history_start = 0 -%}
     {{ block('history') }}
-
+    {%- endif %}
     {{ block('instruction') }}
     対象:
     {% for k, v in info.status_map.items() -%}
@@ -126,15 +116,15 @@ prompt:
     {{ block('constraints') }}
   guard: |-
     {{ block('identity') }}
-
-    # 日次イベント
     {{ block('event') }}
-
-    # トーク履歴
+    {% if thread_enabled -%}
+    {{ block('thread/summary') }}
+    {{ block('thread/history') }}
+    {%- else -%}
     {% set history_source = talk_history -%}
     {% set history_start = 0 -%}
     {{ block('history') }}
-
+    {%- endif %}
     {{ block('instruction') }}
     対象:
     {% for k, v in info.status_map.items() -%}
@@ -144,15 +134,15 @@ prompt:
     {{ block('constraints') }}
   vote: |-
     {{ block('identity') }}
-
-    # 日次イベント
     {{ block('event') }}
-
-    # トーク履歴
+    {% if thread_enabled -%}
+    {{ block('thread/summary') }}
+    {{ block('thread/history') }}
+    {%- else -%}
     {% set history_source = talk_history -%}
     {% set history_start = 0 -%}
     {{ block('history') }}
-
+    {%- endif %}
     {{ block('instruction') }}
     対象:
     {% for k, v in info.status_map.items() -%}
@@ -162,15 +152,10 @@ prompt:
     {{ block('constraints') }}
   attack: |-
     {{ block('identity') }}
-
-    # 日次イベント
     {{ block('event') }}
-
-    # 囁き履歴
     {% set history_source = whisper_history -%}
     {% set history_start = 0 -%}
     {{ block('history') }}
-
     {{ block('instruction') }}
     対象:
     {% for k, v in info.status_map.items() -%}

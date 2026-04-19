@@ -3,7 +3,7 @@
 # モード固有の設定 (llm / prompt) は configs で指定された子configファイルから読み込まれ,
 # このファイルとマージされる. キー衝突時は子configの値が優先される.
 
-mode: multi_turn
+mode: single_turn
 # プロンプトブロック (prompts/<lang>/) の言語. jp / en.
 lang: jp
 
